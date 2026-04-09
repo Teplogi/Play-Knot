@@ -24,8 +24,13 @@ export function EditScheduleDialog({ schedule }: EditScheduleDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // datetime-localの形式に変換
-  const initialDate = new Date(schedule.date).toISOString().slice(0, 16);
+  // datetime-localの形式に変換（JST）
+  const toLocalDatetime = (iso: string) => {
+    const d = new Date(iso);
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+  };
+  const initialDate = toLocalDatetime(schedule.date);
   const [date, setDate] = useState(initialDate);
   const [location, setLocation] = useState(schedule.location);
   const [note, setNote] = useState(schedule.note || "");
@@ -51,7 +56,7 @@ export function EditScheduleDialog({ schedule }: EditScheduleDialogProps) {
         body: JSON.stringify({
           scheduleId: schedule.id,
           teamId: schedule.team_id,
-          date,
+          date: date.includes("+") ? date : date + ":00+09:00",
           location,
           note,
           capacity: capacityNum,

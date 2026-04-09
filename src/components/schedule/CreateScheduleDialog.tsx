@@ -42,7 +42,7 @@ export function CreateScheduleDialog({ teamId }: CreateScheduleDialogProps) {
       const res = await fetch("/api/schedules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId, date, location, note, capacity: capacityNum }),
+        body: JSON.stringify({ teamId, date: date + ":00+09:00", location, note, capacity: capacityNum }),
       });
 
       if (!res.ok) {

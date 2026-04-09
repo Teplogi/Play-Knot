@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const { teamId, date, location, note } = await request.json();
+    const { teamId, date, location, note, capacity } = await request.json();
 
     // ホスト権限チェック
     const { data: member } = await supabase
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
         date,
         location,
         note: note || null,
+        capacity: capacity ?? null,
         created_by: user.id,
       })
       .select()
@@ -55,7 +56,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const { scheduleId, teamId, date, location, note } = await request.json();
+    const { scheduleId, teamId, date, location, note, capacity } = await request.json();
 
     // ホスト権限チェック
     const { data: member } = await supabase
@@ -71,7 +72,7 @@ export async function PUT(request: Request) {
 
     const { data: schedule, error } = await supabase
       .from("schedules")
-      .update({ date, location, note: note || null })
+      .update({ date, location, note: note || null, capacity: capacity ?? null })
       .eq("id", scheduleId)
       .select()
       .single();
