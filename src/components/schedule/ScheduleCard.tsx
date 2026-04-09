@@ -18,6 +18,8 @@ export function ScheduleCard({ schedule, teamId, totalMembers, userId }: Schedul
   const absentCount = schedule.attendances.filter((a) => a.status === "absent").length;
   const unanswered = totalMembers - schedule.attendances.length;
   const myAttendance = schedule.attendances.find((a) => a.user_id === userId);
+  const hasCapacity = schedule.capacity !== null && schedule.capacity !== undefined;
+  const isFull = hasCapacity && attendCount >= (schedule.capacity as number);
 
   return (
     <Link href={`/teams/${teamId}/schedules/${schedule.id}`}>
@@ -57,10 +59,16 @@ export function ScheduleCard({ schedule, teamId, totalMembers, userId }: Schedul
           </div>
         </div>
         {/* 出欠サマリー */}
-        <div className="flex gap-4 mt-3 pt-3 border-t border-gray-50 text-xs">
-          <span className="text-green-600 font-medium">参加 {attendCount}</span>
+        <div className="flex gap-4 mt-3 pt-3 border-t border-gray-50 text-xs items-center">
+          <span className="text-green-600 font-medium">
+            参加 {attendCount}
+            {hasCapacity && <span className="text-gray-400 font-normal">/{schedule.capacity}</span>}
+          </span>
           <span className="text-red-500 font-medium">不参加 {absentCount}</span>
           <span className="text-gray-400">未回答 {unanswered}</span>
+          {isFull && (
+            <Badge className="bg-red-50 text-red-700 border-red-200 text-[10px] ml-auto">満員</Badge>
+          )}
         </div>
       </div>
     </Link>

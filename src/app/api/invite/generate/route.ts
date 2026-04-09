@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .single();
 
-    if (!member || member.role !== "host") {
+    if (!member || (member.role !== "host" && member.role !== "co_host")) {
       return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
     }
 

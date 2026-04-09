@@ -4,7 +4,7 @@ export type MemberStats = {
   attendCount: number;
   absentCount: number;
   attendanceRate: number; // 小数点1桁（例：75.0）
-  cancelCount: number;    // ドタキャン数
+  samedayCancelCount: number; // 当日キャンセル数
 };
 
 type MemberInput = {
@@ -17,14 +17,18 @@ type AttendanceInput = {
   status: "attend" | "absent";
   created_at: string;
   updated_at: string;
+  /** 紐づくスケジュールの日付 */
+  schedule_date: string;
 };
 
-// ドタキャン判定：最終statusがabsent かつ created_atとupdated_atの日付が異なる
-function isDotacan(attendance: AttendanceInput): boolean {
+// 当日キャンセル判定：最終statusがabsent かつ updated_atがスケジュール当日0:00以降
+function isSamedayCancel(attendance: AttendanceInput): boolean {
   if (attendance.status !== "absent") return false;
-  const createdDate = new Date(attendance.created_at).toDateString();
-  const updatedDate = new Date(attendance.updated_at).toDateString();
-  return createdDate !== updatedDate;
+  const scheduleDate = new Date(attendance.schedule_date);
+  const scheduleDayStart = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
+  const updatedAt = new Date(attendance.updated_at);
+  // updated_at がスケジュール当日以降 かつ created_at より後（＝変更があった）
+  return updatedAt >= scheduleDayStart && attendance.created_at !== attendance.updated_at;
 }
 
 export function calcMemberStats(
@@ -48,7 +52,7 @@ export function calcMemberStats(
     const attendanceRate = total > 0
       ? Math.round((attendCount / total) * 1000) / 10
       : 0;
-    const cancelCount = userAttendances.filter(isDotacan).length;
+    const samedayCancelCount = userAttendances.filter(isSamedayCancel).length;
 
     return {
       userId: member.user_id,
@@ -56,7 +60,7 @@ export function calcMemberStats(
       attendCount,
       absentCount,
       attendanceRate,
-      cancelCount,
+      samedayCancelCount,
     };
   });
 }

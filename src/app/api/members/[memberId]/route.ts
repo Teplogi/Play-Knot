@@ -23,8 +23,25 @@ export async function PUT(
       .eq("user_id", user.id)
       .single();
 
-    if (!callerMember || callerMember.role !== "host") {
+    if (!callerMember || (callerMember.role !== "host" && callerMember.role !== "co_host")) {
       return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
+    }
+
+    // co_host が co_host 上限数を超えないかチェック
+    if (role === "co_host") {
+      const { count } = await supabase
+        .from("team_members")
+        .select("*", { count: "exact", head: true })
+        .eq("team_id", teamId)
+        .eq("role", "co_host")
+        .neq("id", memberId);
+
+      if ((count || 0) >= 3) {
+        return NextResponse.json(
+          { error: "共同ホストは1チームにつき3名までです" },
+          { status: 400 }
+        );
+      }
     }
 
     // 最後のホスト降格チェック
@@ -92,7 +109,7 @@ export async function DELETE(
       .eq("user_id", user.id)
       .single();
 
-    if (!callerMember || callerMember.role !== "host") {
+    if (!callerMember || (callerMember.role !== "host" && callerMember.role !== "co_host")) {
       return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
     }
 

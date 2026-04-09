@@ -1,8 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// ホスト専用パス（/teams/[teamId]/ 配下）
-const HOST_ONLY_PATHS = ["/members", "/ng-list", "/attendance", "/settings"];
+// ホストまたは共同ホストのみアクセス可能なパス
+const HOST_ONLY_PATHS = ["/members", "/ng-list", "/attendance"];
+// settings はゲストも通知設定のみアクセス可能なため、ここからは除外
 
 // ミドルウェア用Supabaseクライアント（セッション更新を処理）
 export async function updateSession(request: NextRequest) {
@@ -70,8 +71,8 @@ export async function updateSession(request: NextRequest) {
           .eq("user_id", user.id)
           .single();
 
-        // ホストでなければチームホームへリダイレクト
-        if (!member || member.role !== "host") {
+        // ホスト・共同ホストでなければチームホームへリダイレクト
+        if (!member || (member.role !== "host" && member.role !== "co_host")) {
           const url = request.nextUrl.clone();
           url.pathname = `/teams/${teamId}`;
           return NextResponse.redirect(url);

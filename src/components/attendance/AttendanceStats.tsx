@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { MemberStats } from "@/lib/attendance/stats";
 
-type SortKey = "name" | "attendanceRate" | "cancelCount";
+type SortKey = "name" | "attendanceRate" | "samedayCancelCount";
 type SortDir = "asc" | "desc";
 
 type AttendanceStatsProps = {
@@ -43,7 +43,7 @@ export function AttendanceStats({ stats }: AttendanceStatsProps) {
     let cmp = 0;
     if (sortKey === "name") cmp = a.name.localeCompare(b.name, "ja");
     else if (sortKey === "attendanceRate") cmp = a.attendanceRate - b.attendanceRate;
-    else cmp = a.cancelCount - b.cancelCount;
+    else cmp = a.samedayCancelCount - b.samedayCancelCount;
     return sortDir === "asc" ? cmp : -cmp;
   });
 
@@ -59,8 +59,8 @@ export function AttendanceStats({ stats }: AttendanceStatsProps) {
         <button onClick={() => handleSort("attendanceRate")} className={`px-2 py-1 rounded-lg transition-colors ${sortKey === "attendanceRate" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-gray-400 hover:text-gray-600"}`}>
           出席率{arrow("attendanceRate")}
         </button>
-        <button onClick={() => handleSort("cancelCount")} className={`px-2 py-1 rounded-lg transition-colors ${sortKey === "cancelCount" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-gray-400 hover:text-gray-600"}`}>
-          ドタキャン{arrow("cancelCount")}
+        <button onClick={() => handleSort("samedayCancelCount")} className={`px-2 py-1 rounded-lg transition-colors ${sortKey === "samedayCancelCount" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-gray-400 hover:text-gray-600"}`}>
+          当日キャンセル{arrow("samedayCancelCount")}
         </button>
       </div>
 
@@ -76,8 +76,8 @@ export function AttendanceStats({ stats }: AttendanceStatsProps) {
                   {s.name.charAt(0)}
                 </div>
                 <span className="font-medium text-gray-900 text-sm">{s.name}</span>
-                {s.cancelCount >= 3 && (
-                  <span className="text-orange-500 text-sm" title="ドタキャン3回以上" role="img" aria-label="警告">⚠</span>
+                {s.samedayCancelCount >= 3 && (
+                  <span className="text-orange-500 text-sm" title="当日キャンセル3回以上" role="img" aria-label="警告">⚠</span>
                 )}
               </div>
               <RateBadge rate={s.attendanceRate} />
@@ -86,7 +86,7 @@ export function AttendanceStats({ stats }: AttendanceStatsProps) {
             <div className="flex gap-4 mt-2 text-xs text-gray-400">
               <span>出席 <span className="text-green-600 font-medium">{s.attendCount}</span></span>
               <span>欠席 <span className="text-red-500 font-medium">{s.absentCount}</span></span>
-              <span>ドタキャン <span className={`font-medium ${s.cancelCount >= 3 ? "text-orange-500" : "text-gray-500"}`}>{s.cancelCount}</span></span>
+              <span>当日キャンセル <span className={`font-medium ${s.samedayCancelCount >= 3 ? "text-orange-500" : "text-gray-500"}`}>{s.samedayCancelCount}</span></span>
             </div>
           </div>
         ))

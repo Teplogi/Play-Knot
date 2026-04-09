@@ -18,20 +18,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import type { TeamMemberWithUser } from "@/types";
+import type { TeamMemberWithUser, TeamRole } from "@/types";
 
 type MemberFormProps = {
   teamId: string;
   member?: TeamMemberWithUser;
+  coHostCount: number;
   onUpdated: () => void;
   trigger: React.ReactNode;
 };
 
-export function MemberForm({ teamId, member, onUpdated, trigger }: MemberFormProps) {
+export function MemberForm({ teamId, member, coHostCount, onUpdated, trigger }: MemberFormProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [gender, setGender] = useState(member?.gender || "未設定");
-  const [role, setRole] = useState(member?.role || "guest");
+  const [role, setRole] = useState<TeamRole>(member?.role || "guest");
+
+  // co_host 上限チェック: 現在のメンバーが既に co_host なら自身は除外
+  const currentIsCoHost = member?.role === "co_host";
+  const canSelectCoHost = coHostCount - (currentIsCoHost ? 1 : 0) < 3;
 
   const isEdit = !!member;
 
@@ -98,12 +103,15 @@ export function MemberForm({ teamId, member, onUpdated, trigger }: MemberFormPro
 
           <div>
             <Label className="text-sm font-medium mb-2 block">役割</Label>
-            <Select value={role} onValueChange={(v) => v && setRole(v as typeof role)}>
+            <Select value={role} onValueChange={(v) => v && setRole(v as TeamRole)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="host">ホスト</SelectItem>
+                <SelectItem value="co_host" disabled={!canSelectCoHost}>
+                  共同ホスト{!canSelectCoHost ? "（上限3名）" : ""}
+                </SelectItem>
                 <SelectItem value="guest">ゲスト</SelectItem>
               </SelectContent>
             </Select>

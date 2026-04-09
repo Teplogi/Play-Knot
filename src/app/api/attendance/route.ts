@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "無効なステータスです" }, { status: 400 });
     }
 
-    // 既存の出欠レコードを確認（ドタキャン検知用）
+    // 既存の出欠レコードを確認（当日キャンセル検知用）
     const { data: existing } = await supabase
       .from("attendances")
       .select("id, status, created_at")
@@ -30,15 +30,24 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .single();
 
-    let isDotacan = false;
+    let isSamedayCancel = false;
 
     if (existing) {
-      // ドタキャン検知：参加→不参加に変更 かつ created_atと現在の日付が異なる
+      // 当日キャンセル検知：参加→不参加に変更 かつ 練習日の当日0:00以降
       if (existing.status === "attend" && status === "absent") {
-        const createdDate = new Date(existing.created_at).toDateString();
-        const nowDate = new Date().toDateString();
-        if (createdDate !== nowDate) {
-          isDotacan = true;
+        const { data: schedule } = await supabase
+          .from("schedules")
+          .select("date")
+          .eq("id", scheduleId)
+          .single();
+
+        if (schedule) {
+          const scheduleDate = new Date(schedule.date);
+          const scheduleDayStart = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
+          const now = new Date();
+          if (now >= scheduleDayStart) {
+            isSamedayCancel = true;
+          }
         }
       }
 
@@ -58,14 +67,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "出欠の更新に失敗しました" }, { status: 500 });
       }
 
-      // ドタキャン時にホストへメール通知（非同期・失敗してもレスポンスに影響しない）
-      if (isDotacan) {
+      // 当日キャンセル時にホストへメール通知（非同期・失敗してもレスポンスに影響しない）
+      if (isSamedayCancel) {
         notifyCancelToHosts(supabase, scheduleId, user.id, comment).catch((err) =>
-          console.error("キャンセル通知送信エラー:", err)
+          console.error("当日キャンセル通知送信エラー:", err)
         );
       }
 
-      return NextResponse.json({ attendance, isDotacan });
+      return NextResponse.json({ attendance, isSamedayCancel });
     }
 
     // 新規レコードを作成
@@ -84,13 +93,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "出欠の登録に失敗しました" }, { status: 500 });
     }
 
-    return NextResponse.json({ attendance, isDotacan: false });
+    return NextResponse.json({ attendance, isSamedayCancel: false });
   } catch {
     return NextResponse.json({ error: "サーバーエラー" }, { status: 500 });
   }
 }
 
-// ドタキャン時のホスト通知（非同期処理）
+// 当日キャンセル時のホスト通知（非同期処理）
 async function notifyCancelToHosts(
   supabase: Awaited<ReturnType<typeof createClient>>,
   scheduleId: string,

@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext,
   DragOverlay,
-  closestCenter,
-  PointerSensor,
+  closestCorners,
+  pointerWithin,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
+  useDroppable,
+  type CollisionDetection,
   type DragStartEvent,
   type DragEndEvent,
-  type DragOverEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -20,12 +24,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Member } from "@/lib/divide/algorithm";
 
@@ -43,17 +41,29 @@ function getTeamColor(index: number) {
   return TEAM_COLORS[index % TEAM_COLORS.length];
 }
 
+/**
+ * closestCorners は DragOverlay の矩形（親に transform があるとズレやすい）基準になる。
+ * まずポインタ直下の droppable を使い、カラム(team-N)とメンバーが両方ヒットする場合はメンバーを優先する。
+ */
+const divideTeamCollisionDetection: CollisionDetection = (args) => {
+  const pointerHits = pointerWithin(args);
+  if (pointerHits.length > 0) {
+    const memberHits = pointerHits.filter((h) => !String(h.id).startsWith("team-"));
+    return memberHits.length > 0 ? memberHits : pointerHits;
+  }
+  return closestCorners(args);
+};
+
 type DivideResultStepProps = {
   teams: Member[][];
   hasNgViolation: boolean;
-  onBack: () => void;
   onReshuffle: () => void;
 };
 
 function MemberCardContent({ member }: { member: Member }) {
   const genderBg = member.gender === "男" ? "bg-blue-100 text-blue-700" : member.gender === "女" ? "bg-pink-100 text-pink-700" : "bg-gray-100 text-gray-500";
   return (
-    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white border border-gray-100 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow">
+    <div className="flex min-h-11 items-center gap-2.5 px-2.5 py-2 rounded-lg bg-white border border-gray-100 shadow-sm cursor-grab select-none active:cursor-grabbing hover:shadow-md transition-shadow [-webkit-touch-callout:none]">
       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${genderBg}`}>
         {member.name.charAt(0)}
       </div>
@@ -83,13 +93,20 @@ function TeamColumn({ teamIndex, members }: { teamIndex: number; members: Member
   const maleCount = members.filter((m) => m.gender === "男").length;
   const femaleCount = members.filter((m) => m.gender === "女").length;
 
+  // チームカラム自体を droppable にすることで、空カラムや余白へのドロップを受け付ける
+  const droppableId = `team-${teamIndex}`;
+  const { setNodeRef, isOver } = useDroppable({ id: droppableId });
+
   return (
     <div className={`rounded-xl border ${color.border} overflow-hidden`}>
       <div className={`${color.header} px-4 py-2.5 flex items-center justify-between`}>
         <span className={`text-sm font-bold ${color.headerText}`}>チーム {teamIndex + 1}</span>
         <span className={`text-xs ${color.headerText} opacity-80`}>{members.length}人</span>
       </div>
-      <div className={`${color.bg} p-3 space-y-1.5 min-h-[60px]`}>
+      <div
+        ref={setNodeRef}
+        className={`${color.bg} p-3 space-y-1.5 min-h-[80px] transition-colors ${isOver ? "ring-2 ring-indigo-400 ring-inset" : ""}`}
+      >
         <SortableContext items={members.map((m) => m.id)} strategy={verticalListSortingStrategy}>
           {members.map((member) => (
             <SortableMemberCard key={member.id} member={member} />
@@ -106,14 +123,29 @@ function TeamColumn({ teamIndex, members }: { teamIndex: number; members: Member
   );
 }
 
-export function DivideResultStep({ teams: initialTeams, hasNgViolation, onBack, onReshuffle }: DivideResultStepProps) {
+export function DivideResultStep({ teams: initialTeams, hasNgViolation, onReshuffle }: DivideResultStepProps) {
   const [teams, setTeams] = useState<Member[][]>(initialTeams);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [overlayMounted, setOverlayMounted] = useState(false);
   const { isHost } = useAuth();
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  // 親から新しい分け結果が来たら反映する
+  useEffect(() => {
+    setTeams(initialTeams);
+  }, [initialTeams]);
+
+  useEffect(() => {
+    setOverlayMounted(true);
+  }, []);
+
+  // マウス: わずかに動かしてからドラッグ（誤クリック防止）
+  // タッチ: 長押しでドラッグ開始 → 縦スクロールと競合しにくい（@dnd-kit 推奨パターン）
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 220, tolerance: 8 },
+    })
+  );
   const activeMember = activeId ? teams.flat().find((m) => m.id === activeId) : null;
 
   const findTeamIndex = useCallback(
@@ -121,65 +153,52 @@ export function DivideResultStep({ teams: initialTeams, hasNgViolation, onBack, 
     [teams]
   );
 
+  // over.id が "team-N" ならそのチーム index、メンバー id ならそのメンバーが属するチーム index
+  const resolveOverTeamIndex = useCallback(
+    (overId: string): number => {
+      if (overId.startsWith("team-")) {
+        const idx = parseInt(overId.slice(5), 10);
+        return isNaN(idx) ? -1 : idx;
+      }
+      return findTeamIndex(overId);
+    },
+    [findTeamIndex]
+  );
+
   const handleDragStart = (event: DragStartEvent) => setActiveId(event.active.id as string);
 
-  const handleDragOver = (event: DragOverEvent) => {
+  // ドラッグ中は配列を変更せず（レイアウト振動を避ける）、ドロップ時にまとめて反映する
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over) return;
+    setActiveId(null);
+    if (!over || active.id === over.id) return;
+
     const activeTeamIdx = findTeamIndex(active.id as string);
-    const overTeamIdx = findTeamIndex(over.id as string);
-    if (activeTeamIdx === -1 || overTeamIdx === -1 || activeTeamIdx === overTeamIdx) return;
+    const overTeamIdx = resolveOverTeamIndex(over.id as string);
+    if (activeTeamIdx === -1 || overTeamIdx === -1) return;
+
+    const overId = over.id as string;
 
     setTeams((prev) => {
       const newTeams = prev.map((t) => [...t]);
       const member = newTeams[activeTeamIdx].find((m) => m.id === active.id);
       if (!member) return prev;
       newTeams[activeTeamIdx] = newTeams[activeTeamIdx].filter((m) => m.id !== active.id);
-      const overIndex = newTeams[overTeamIdx].findIndex((m) => m.id === over.id);
-      if (overIndex >= 0) { newTeams[overTeamIdx].splice(overIndex, 0, member); } else { newTeams[overTeamIdx].push(member); }
+
+      if (overId.startsWith("team-")) {
+        // コンテナ自身へのドロップ → 末尾に追加
+        newTeams[overTeamIdx].push(member);
+      } else {
+        const overIndex = newTeams[overTeamIdx].findIndex((m) => m.id === overId);
+        if (overIndex >= 0) {
+          newTeams[overTeamIdx].splice(overIndex, 0, member);
+        } else {
+          newTeams[overTeamIdx].push(member);
+        }
+      }
       return newTeams;
     });
   };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    if (!over || active.id === over.id) return;
-    const activeTeamIdx = findTeamIndex(active.id as string);
-    const overTeamIdx = findTeamIndex(over.id as string);
-    if (activeTeamIdx === overTeamIdx && activeTeamIdx !== -1) {
-      setTeams((prev) => {
-        const newTeams = prev.map((t) => [...t]);
-        const team = newTeams[activeTeamIdx];
-        const oldIndex = team.findIndex((m) => m.id === active.id);
-        const newIndex = team.findIndex((m) => m.id === over.id);
-        if (oldIndex !== -1 && newIndex !== -1) {
-          const [moved] = team.splice(oldIndex, 1);
-          team.splice(newIndex, 0, moved);
-        }
-        return newTeams;
-      });
-    }
-  };
-
-  if (confirmed) {
-    return (
-      <div className="space-y-4">
-        <div className="rounded-xl bg-green-50 border border-green-200 p-4 text-center">
-          <svg className="w-6 h-6 text-green-600 mx-auto mb-1" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <p className="text-green-800 font-semibold">チーム分けが確定しました</p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {teams.map((team, i) => (
-            <TeamColumn key={i} teamIndex={i} members={team} />
-          ))}
-        </div>
-        <div className="flex justify-center pt-4">
-          <Button variant="outline" onClick={onBack} className="rounded-xl">最初からやり直す</Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -194,47 +213,37 @@ export function DivideResultStep({ teams: initialTeams, hasNgViolation, onBack, 
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900">チーム分け結果</h3>
-        <p className="text-xs text-gray-400">ドラッグ&ドロップで移動可能</p>
-      </div>
+      <p className="text-xs text-gray-400 text-right">
+        ドラッグで移動（スマホはメンバーを長押ししてから）
+      </p>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={divideTeamCollisionDetection}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           {teams.map((team, i) => (
             <TeamColumn key={i} teamIndex={i} members={team} />
           ))}
         </div>
-        <DragOverlay>
-          {activeMember ? (
-            <div className="shadow-xl shadow-indigo-200/50 rounded-lg scale-105">
-              <MemberCardContent member={activeMember} />
-            </div>
-          ) : null}
-        </DragOverlay>
+        {overlayMounted &&
+          createPortal(
+            <DragOverlay dropAnimation={null} zIndex={1100}>
+              {activeMember ? (
+                <div className="shadow-xl shadow-indigo-200/50 rounded-lg">
+                  <MemberCardContent member={activeMember} />
+                </div>
+              ) : null}
+            </DragOverlay>,
+            document.body
+          )}
       </DndContext>
 
-      {/* 固定フッター */}
-      <div className="sticky bottom-16 md:bottom-0 bg-white/90 backdrop-blur-md rounded-xl border border-gray-100 shadow-lg p-3 flex justify-between">
-        <Button variant="outline" onClick={onBack} className="rounded-xl" aria-label="設定に戻る">← 戻る</Button>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onReshuffle} className="rounded-xl" aria-label="再抽選">再抽選</Button>
-          <Button onClick={() => setShowConfirmDialog(true)} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-6" aria-label="確定する">確定する</Button>
-        </div>
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={onReshuffle} className="rounded-xl" aria-label="再抽選">再抽選</Button>
       </div>
-
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>チーム分けを確定しますか？</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-gray-500">確定すると全メンバーがチーム分け結果を閲覧できます。</p>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)} className="rounded-xl">キャンセル</Button>
-            <Button onClick={() => { setShowConfirmDialog(false); setConfirmed(true); }} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">確定</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { MemberForm } from "./MemberForm";
 import { toast } from "sonner";
 import type { TeamMemberWithUser } from "@/types";
+import { ROLE_LABELS } from "@/types";
 
 type MemberListProps = {
   members: TeamMemberWithUser[];
@@ -17,6 +18,7 @@ type MemberListProps = {
 
 export function MemberList({ members, teamId, onUpdated }: MemberListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const coHostCount = members.filter((m) => m.role === "co_host").length;
 
   const handleDelete = async (member: TeamMemberWithUser) => {
     if (!confirm(`${member.users.name} をチームから削除しますか？`)) return;
@@ -57,8 +59,17 @@ export function MemberList({ members, teamId, onUpdated }: MemberListProps) {
                       {member.gender}
                     </Badge>
                   )}
-                  <Badge variant={member.role === "host" ? "default" : "secondary"} className={`text-[10px] px-1.5 py-0 ${member.role === "host" ? "bg-indigo-100 text-indigo-700 border-indigo-200" : ""}`}>
-                    {member.role === "host" ? "ホスト" : "ゲスト"}
+                  <Badge
+                    variant={member.role === "guest" ? "secondary" : "default"}
+                    className={`text-[10px] px-1.5 py-0 ${
+                      member.role === "host"
+                        ? "bg-indigo-100 text-indigo-700 border-indigo-200"
+                        : member.role === "co_host"
+                        ? "bg-violet-100 text-violet-700 border-violet-200"
+                        : ""
+                    }`}
+                  >
+                    {ROLE_LABELS[member.role]}
                   </Badge>
                   <span className="text-[10px] text-gray-300 ml-auto">
                     {format(new Date(member.created_at), "yyyy/M/d", { locale: ja })}
@@ -70,6 +81,7 @@ export function MemberList({ members, teamId, onUpdated }: MemberListProps) {
               <MemberForm
                 teamId={teamId}
                 member={member}
+                coHostCount={coHostCount}
                 onUpdated={onUpdated}
                 trigger={<Button variant="ghost" size="sm" className="text-gray-400 hover:text-indigo-600 h-7 text-xs">編集</Button>}
               />

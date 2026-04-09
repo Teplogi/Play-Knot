@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// ホスト権限チェック共通関数
-async function verifyHost(supabase: Awaited<ReturnType<typeof createClient>>, teamId: string, userId: string) {
+// ホスト権限チェック共通関数（host / co_host どちらもOK）
+async function verifyHostPrivilege(supabase: Awaited<ReturnType<typeof createClient>>, teamId: string, userId: string) {
   const { data: member } = await supabase
     .from("team_members")
     .select("role")
     .eq("team_id", teamId)
     .eq("user_id", userId)
     .single();
-  return member?.role === "host";
+  return member?.role === "host" || member?.role === "co_host";
 }
 
 // メンバー一覧取得
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     const teamId = searchParams.get("teamId");
     if (!teamId) return NextResponse.json({ error: "チームIDが必要です" }, { status: 400 });
 
-    if (!(await verifyHost(supabase, teamId, user.id))) {
+    if (!(await verifyHostPrivilege(supabase, teamId, user.id))) {
       return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
     }
 
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "必須パラメータが不足しています" }, { status: 400 });
     }
 
-    if (!(await verifyHost(supabase, teamId, user.id))) {
+    if (!(await verifyHostPrivilege(supabase, teamId, user.id))) {
       return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
     }
 

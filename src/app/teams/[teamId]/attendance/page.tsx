@@ -1,60 +1,16 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { calcMemberStats } from "@/lib/attendance/stats";
+// TODO: Supabase接続後に元のServer Component版に戻す
 import { AttendanceStatsClient } from "./AttendanceStatsClient";
+import type { MemberStats } from "@/lib/attendance/stats";
 
-export default async function AttendancePage({
-  params,
-}: {
-  params: Promise<{ teamId: string }>;
-}) {
-  const { teamId } = await params;
-  const supabase = await createClient();
+export default async function AttendancePage() {
+  const mockStats: MemberStats[] = [
+    { userId: "u1", name: "田中太郎", attendCount: 12, absentCount: 2, attendanceRate: 85.7, samedayCancelCount: 0 },
+    { userId: "u2", name: "佐藤花子", attendCount: 10, absentCount: 4, attendanceRate: 71.4, samedayCancelCount: 1 },
+    { userId: "u3", name: "鈴木一郎", attendCount: 8, absentCount: 6, attendanceRate: 57.1, samedayCancelCount: 3 },
+    { userId: "u4", name: "山田次郎", attendCount: 13, absentCount: 1, attendanceRate: 92.9, samedayCancelCount: 0 },
+    { userId: "u5", name: "高橋美咲", attendCount: 5, absentCount: 9, attendanceRate: 35.7, samedayCancelCount: 4 },
+    { userId: "u6", name: "中村大輔", attendCount: 11, absentCount: 3, attendanceRate: 78.6, samedayCancelCount: 1 },
+  ];
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  // ホスト権限チェック
-  const { data: member } = await supabase
-    .from("team_members")
-    .select("role")
-    .eq("team_id", teamId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!member || member.role !== "host") redirect(`/teams/${teamId}`);
-
-  // 全メンバー取得
-  const { data: teamMembers } = await supabase
-    .from("team_members")
-    .select("user_id, users(id, name)")
-    .eq("team_id", teamId);
-
-  const members = (teamMembers || []).map((tm) => {
-    const u = tm.users as unknown as { id: string; name: string };
-    return { user_id: u.id, name: u.name };
-  });
-
-  // このチームの全日程IDを取得
-  const { data: schedules } = await supabase
-    .from("schedules")
-    .select("id")
-    .eq("team_id", teamId);
-
-  const scheduleIds = (schedules || []).map((s) => s.id);
-
-  // 全出欠データを取得
-  let attendances: { user_id: string; status: "attend" | "absent"; created_at: string; updated_at: string }[] = [];
-  if (scheduleIds.length > 0) {
-    const { data } = await supabase
-      .from("attendances")
-      .select("user_id, status, created_at, updated_at")
-      .in("schedule_id", scheduleIds);
-
-    attendances = (data || []) as typeof attendances;
-  }
-
-  const stats = calcMemberStats(members, attendances);
-
-  return <AttendanceStatsClient stats={stats} />;
+  return <AttendanceStatsClient stats={mockStats} />;
 }

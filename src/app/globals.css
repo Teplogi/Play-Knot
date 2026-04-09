@@ -97,9 +97,10 @@
 }
 
 /* ページフェードインアニメーション */
+/* translateY(0) のままだと transform が残り、子の position:fixed（例: dnd-kit DragOverlay）の基準がずれる */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 
 .animate-page-in {

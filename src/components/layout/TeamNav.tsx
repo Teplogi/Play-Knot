@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { hasHostPrivilege } from "@/types";
+import type { TeamRole } from "@/types";
 import { Button } from "@/components/ui/button";
 
 type TeamNavProps = {
@@ -13,19 +15,21 @@ type TeamNavProps = {
 };
 
 // ナビアイテム定義
-function getNavItems(teamId: string, isHost: boolean) {
+function getNavItems(teamId: string, role: TeamRole) {
+  const isHostOrCoHost = hasHostPrivilege(role);
   return [
     { href: `/teams/${teamId}`, label: "ホーム", icon: "home" },
     { href: `/teams/${teamId}/schedules`, label: "日程", icon: "calendar" },
     { href: `/teams/${teamId}/divide`, label: "チーム分け", icon: "shuffle" },
-    ...(isHost
+    ...(isHostOrCoHost
       ? [
           { href: `/teams/${teamId}/members`, label: "メンバー", icon: "users" },
           { href: `/teams/${teamId}/ng-list`, label: "NGリスト", icon: "shield" },
           { href: `/teams/${teamId}/attendance`, label: "出席率", icon: "chart" },
-          { href: `/teams/${teamId}/settings`, label: "設定", icon: "settings" },
         ]
       : []),
+    // 設定は全ロールに表示（ゲストは通知設定のみ）
+    { href: `/teams/${teamId}/settings`, label: "設定", icon: "settings" },
   ];
 }
 
@@ -54,11 +58,10 @@ function NavIcon({ icon, className }: { icon: string; className?: string }) {
 export function TeamNav({ teamId, teamName, role }: TeamNavProps) {
   const pathname = usePathname();
   const { setTeamRole, signOut } = useAuth();
-  const isHost = role === "host";
-  const navItems = getNavItems(teamId, isHost);
+  const navItems = getNavItems(teamId, role as TeamRole);
 
   useEffect(() => {
-    setTeamRole(role as "host" | "guest");
+    setTeamRole(role as TeamRole);
   }, [role, setTeamRole]);
 
   // モバイルボトムナビに表示するアイテム（最大5つ）

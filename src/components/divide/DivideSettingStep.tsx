@@ -1,14 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type DivideSettingStepProps = {
   memberCount: number;
-  onBack: () => void;
-  onNext: (settings: DivideSettings) => void;
+  onChange: (settings: DivideSettings | null) => void;
 };
 
 export type DivideSettings = {
@@ -17,18 +15,22 @@ export type DivideSettings = {
   method: "random" | "gender_equal";
 };
 
-export function DivideSettingStep({ memberCount, onBack, onNext }: DivideSettingStepProps) {
+export function DivideSettingStep({ memberCount, onChange }: DivideSettingStepProps) {
   const [divideBy, setDivideBy] = useState<"team_count" | "members_per_team">("team_count");
-  const [value, setValue] = useState(2);
+  const [rawValue, setRawValue] = useState("2");
   const [method, setMethod] = useState<"random" | "gender_equal">("random");
+
+  const numericValue = rawValue === "" ? null : parseInt(rawValue, 10);
 
   // バリデーション
   const getError = (): string | null => {
-    if (value < 1) return "1以上の値を入力してください";
-    if (divideBy === "team_count" && value > memberCount) {
+    if (memberCount < 2) return null; // 結果セクション側でメッセージを出すのでここでは無言
+    if (rawValue === "" || numericValue === null || isNaN(numericValue)) return "値を入力してください";
+    if (numericValue < 1) return "1以上の値を入力してください";
+    if (divideBy === "team_count" && numericValue > memberCount) {
       return `チーム数は参加者数（${memberCount}人）以下にしてください`;
     }
-    if (divideBy === "members_per_team" && value > memberCount) {
+    if (divideBy === "members_per_team" && numericValue > memberCount) {
       return `1チームの人数は参加者数（${memberCount}人）以下にしてください`;
     }
     return null;
@@ -36,10 +38,15 @@ export function DivideSettingStep({ memberCount, onBack, onNext }: DivideSetting
 
   const error = getError();
 
-  const handleNext = () => {
-    if (error) return;
-    onNext({ divideBy, value, method });
-  };
+  // 設定の変化を親に通知（無効な値のときは null）
+  useEffect(() => {
+    if (error || numericValue === null) {
+      onChange(null);
+      return;
+    }
+    onChange({ divideBy, value: numericValue, method });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [divideBy, rawValue, method, error]);
 
   return (
     <div className="space-y-6">
@@ -82,8 +89,8 @@ export function DivideSettingStep({ memberCount, onBack, onNext }: DivideSetting
             type="number"
             min={1}
             max={memberCount}
-            value={value}
-            onChange={(e) => setValue(parseInt(e.target.value) || 1)}
+            value={rawValue}
+            onChange={(e) => setRawValue(e.target.value)}
             className="w-24"
           />
           <span className="text-sm text-muted-foreground">
@@ -128,15 +135,6 @@ export function DivideSettingStep({ memberCount, onBack, onNext }: DivideSetting
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
-
-      <div className="flex justify-between pt-4">
-        <Button variant="outline" onClick={onBack}>
-          ← 戻る
-        </Button>
-        <Button onClick={handleNext} disabled={!!error}>
-          チーム分け実行 →
-        </Button>
-      </div>
     </div>
   );
 }

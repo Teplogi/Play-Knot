@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-async function verifyHost(supabase: Awaited<ReturnType<typeof createClient>>, teamId: string, userId: string) {
+async function verifyHostPrivilege(supabase: Awaited<ReturnType<typeof createClient>>, teamId: string, userId: string) {
   const { data: member } = await supabase
     .from("team_members")
     .select("role")
     .eq("team_id", teamId)
     .eq("user_id", userId)
     .single();
-  return member?.role === "host";
+  return member?.role === "host" || member?.role === "co_host";
 }
 
 // NGリスト取得
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     const teamId = searchParams.get("teamId");
     if (!teamId) return NextResponse.json({ error: "チームIDが必要です" }, { status: 400 });
 
-    if (!(await verifyHost(supabase, teamId, user.id))) {
+    if (!(await verifyHostPrivilege(supabase, teamId, user.id))) {
       return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
     }
 
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "同じメンバーは選択できません" }, { status: 400 });
     }
 
-    if (!(await verifyHost(supabase, teamId, user.id))) {
+    if (!(await verifyHostPrivilege(supabase, teamId, user.id))) {
       return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
     }
 

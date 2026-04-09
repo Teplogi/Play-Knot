@@ -29,10 +29,19 @@ export function EditScheduleDialog({ schedule }: EditScheduleDialogProps) {
   const [date, setDate] = useState(initialDate);
   const [location, setLocation] = useState(schedule.location);
   const [note, setNote] = useState(schedule.note || "");
+  const [capacity, setCapacity] = useState<string>(
+    schedule.capacity !== null && schedule.capacity !== undefined ? String(schedule.capacity) : ""
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !location) return;
+
+    const capacityNum = capacity.trim() === "" ? null : parseInt(capacity, 10);
+    if (capacityNum !== null && (isNaN(capacityNum) || capacityNum < 1)) {
+      toast.error("定員は1以上の数字を入力してください");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -45,6 +54,7 @@ export function EditScheduleDialog({ schedule }: EditScheduleDialogProps) {
           date,
           location,
           note,
+          capacity: capacityNum,
         }),
       });
 
@@ -122,6 +132,22 @@ export function EditScheduleDialog({ schedule }: EditScheduleDialogProps) {
               onChange={(e) => setLocation(e.target.value)}
               required
             />
+          </div>
+          <div>
+            <Label htmlFor="edit-capacity">定員（任意）</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="edit-capacity"
+                type="number"
+                min={1}
+                max={100}
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                placeholder="無制限"
+                className="w-32"
+              />
+              <span className="text-sm text-muted-foreground">人（空欄なら無制限）</span>
+            </div>
           </div>
           <div>
             <Label htmlFor="edit-note">メモ（任意）</Label>

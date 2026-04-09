@@ -25,17 +25,24 @@ export function CreateScheduleDialog({ teamId }: CreateScheduleDialogProps) {
   const [date, setDate] = useState("");
   const [location, setLocation] = useState("");
   const [note, setNote] = useState("");
+  const [capacity, setCapacity] = useState<string>("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !location) return;
+
+    const capacityNum = capacity.trim() === "" ? null : parseInt(capacity, 10);
+    if (capacityNum !== null && (isNaN(capacityNum) || capacityNum < 1)) {
+      toast.error("定員は1以上の数字を入力してください");
+      return;
+    }
 
     setLoading(true);
     try {
       const res = await fetch("/api/schedules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId, date, location, note }),
+        body: JSON.stringify({ teamId, date, location, note, capacity: capacityNum }),
       });
 
       if (!res.ok) {
@@ -49,6 +56,7 @@ export function CreateScheduleDialog({ teamId }: CreateScheduleDialogProps) {
       setDate("");
       setLocation("");
       setNote("");
+      setCapacity("");
       router.refresh();
     } catch {
       toast.error("エラーが発生しました");
@@ -86,6 +94,22 @@ export function CreateScheduleDialog({ teamId }: CreateScheduleDialogProps) {
               placeholder="体育館、グラウンドなど"
               required
             />
+          </div>
+          <div>
+            <Label htmlFor="capacity">定員（任意）</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="capacity"
+                type="number"
+                min={1}
+                max={100}
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                placeholder="無制限"
+                className="w-32"
+              />
+              <span className="text-sm text-muted-foreground">人（空欄なら無制限）</span>
+            </div>
           </div>
           <div>
             <Label htmlFor="note">メモ（任意）</Label>
