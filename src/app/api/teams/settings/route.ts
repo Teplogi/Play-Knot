@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 // チーム基本情報更新
 export async function PUT(request: Request) {
@@ -65,15 +66,20 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "権限がありません" }, { status: 403 });
     }
 
-    // 既存レコードがあるか確認
-    const { data: existing } = await supabase
+    // RLSバイパスでupsert
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: existing } = await admin
       .from("team_settings")
       .select("id")
       .eq("team_id", teamId)
       .single();
 
     if (existing) {
-      const { error } = await supabase
+      const { error } = await admin
         .from("team_settings")
         .update({ ...fields, updated_at: new Date().toISOString() })
         .eq("team_id", teamId);
@@ -81,7 +87,7 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "更新に失敗しました" }, { status: 500 });
       }
     } else {
-      const { error } = await supabase
+      const { error } = await admin
         .from("team_settings")
         .insert({ team_id: teamId, ...fields });
       if (error) {
