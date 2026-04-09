@@ -36,6 +36,20 @@ export default async function SchedulesPage({
     .eq("team_id", teamId)
     .order("date", { ascending: true });
 
+  // チーム設定（デフォルト値）
+  const { data: teamSettings } = await supabase
+    .from("team_settings")
+    .select("default_start_time, default_end_time, attendance_deadline_hours_before, default_locations")
+    .eq("team_id", teamId)
+    .single();
+
+  const scheduleDefaults = teamSettings ? {
+    startTime: teamSettings.default_start_time ?? "19:00",
+    endTime: teamSettings.default_end_time ?? "21:00",
+    deadlineHoursBefore: teamSettings.attendance_deadline_hours_before ?? 1,
+    locations: teamSettings.default_locations ?? [],
+  } : undefined;
+
   return (
     <ScheduleListClient
       teamId={teamId}
@@ -43,6 +57,7 @@ export default async function SchedulesPage({
       totalMembers={totalMembers ?? 0}
       userId={user.id}
       canManageSchedule={canManageSchedule}
+      scheduleDefaults={scheduleDefaults}
     />
   );
 }

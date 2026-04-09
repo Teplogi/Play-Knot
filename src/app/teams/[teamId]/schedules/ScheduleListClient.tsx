@@ -19,9 +19,15 @@ type Props = {
   totalMembers: number;
   userId: string;
   canManageSchedule: boolean;
+  scheduleDefaults?: {
+    startTime?: string;
+    endTime?: string;
+    deadlineHoursBefore?: number;
+    locations?: string[];
+  };
 };
 
-export function ScheduleListClient({ teamId, schedules, totalMembers, userId, canManageSchedule }: Props) {
+export function ScheduleListClient({ teamId, schedules, totalMembers, userId, canManageSchedule, scheduleDefaults }: Props) {
   const [tab, setTab] = useState("upcoming");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [viewLoaded, setViewLoaded] = useState(false);
@@ -80,7 +86,7 @@ export function ScheduleListClient({ teamId, schedules, totalMembers, userId, ca
               カレンダー
             </button>
           </div>
-          {canManageSchedule && <CreateScheduleDialog teamId={teamId} />}
+          {canManageSchedule && <CreateScheduleDialog teamId={teamId} defaults={scheduleDefaults} />}
         </div>
       </div>
 

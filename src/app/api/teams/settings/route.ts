@@ -12,7 +12,6 @@ export async function PUT(request: Request) {
 
     const { teamId, name, sportType, description, iconColor } = await request.json();
 
-    // ホスト権限チェック
     const { data: member } = await supabase
       .from("team_members")
       .select("role")
@@ -35,6 +34,59 @@ export async function PUT(request: Request) {
 
     if (error) {
       return NextResponse.json({ error: "更新に失敗しました" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "サーバーエラー" }, { status: 500 });
+  }
+}
+
+// チーム設定（日程デフォルト・チーム分けデフォルト）の upsert
+export async function PATCH(request: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { teamId, ...fields } = body;
+
+    const { data: member } = await supabase
+      .from("team_members")
+      .select("role")
+      .eq("team_id", teamId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (!member || (member.role !== "host" && member.role !== "co_host")) {
+      return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+    }
+
+    // 既存レコードがあるか確認
+    const { data: existing } = await supabase
+      .from("team_settings")
+      .select("id")
+      .eq("team_id", teamId)
+      .single();
+
+    if (existing) {
+      const { error } = await supabase
+        .from("team_settings")
+        .update({ ...fields, updated_at: new Date().toISOString() })
+        .eq("team_id", teamId);
+      if (error) {
+        return NextResponse.json({ error: "更新に失敗しました" }, { status: 500 });
+      }
+    } else {
+      const { error } = await supabase
+        .from("team_settings")
+        .insert({ team_id: teamId, ...fields });
+      if (error) {
+        return NextResponse.json({ error: "作成に失敗しました" }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ success: true });

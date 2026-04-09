@@ -53,6 +53,9 @@ export function ScheduleDetailClient({
         <CardHeader>
           <CardTitle>
             {format(new Date(schedule.date), "yyyy年M月d日(E) HH:mm", { locale: ja })}
+            {schedule.end_date && (
+              <span className="text-muted-foreground font-normal"> 〜 {format(new Date(schedule.end_date), "HH:mm", { locale: ja })}</span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -73,6 +76,12 @@ export function ScheduleDetailClient({
                   残り {schedule.capacity - attendCount} 枠
                 </Badge>
               )}
+            </div>
+          )}
+          {schedule.deadline && (
+            <div className="flex gap-2">
+              <span className="text-muted-foreground text-sm w-12">締切</span>
+              <span className="text-sm">{format(new Date(schedule.deadline), "M/d(E) HH:mm", { locale: ja })}</span>
             </div>
           )}
           {schedule.note && (

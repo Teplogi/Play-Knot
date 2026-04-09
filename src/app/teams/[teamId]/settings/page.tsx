@@ -30,20 +30,27 @@ export default async function SettingsPage({
     .eq("id", teamId)
     .single();
 
+  // チーム設定（日程デフォルト等）
+  const { data: teamSettings } = await supabase
+    .from("team_settings")
+    .select("*")
+    .eq("team_id", teamId)
+    .single();
+
   const initialSettings: TeamSettings = {
     name: team?.name ?? "",
     description: "",
     sportType: team?.sport_type ?? "",
     iconColor: team?.icon_color ?? "indigo",
     defaultExpirationDays: 7,
-    defaultLocations: [],
-    defaultStartTime: "19:00",
-    defaultDurationMinutes: 120,
-    attendanceDeadlineHoursBefore: 1,
-    defaultDivideBy: "team_count",
-    defaultDivideValue: 2,
-    defaultDivideMethod: "random",
-    autoSelectAttendees: true,
+    defaultLocations: teamSettings?.default_locations ?? [],
+    defaultStartTime: teamSettings?.default_start_time ?? "19:00",
+    defaultEndTime: teamSettings?.default_end_time ?? "21:00",
+    attendanceDeadlineHoursBefore: teamSettings?.attendance_deadline_hours_before ?? 1,
+    defaultDivideBy: (teamSettings?.default_divide_by as "team_count" | "members_per_team") ?? "team_count",
+    defaultDivideValue: teamSettings?.default_divide_value ?? 2,
+    defaultDivideMethod: (teamSettings?.default_divide_method as "random" | "gender_equal") ?? "random",
+    autoSelectAttendees: teamSettings?.auto_select_attendees ?? true,
   };
 
   // 招待リンク

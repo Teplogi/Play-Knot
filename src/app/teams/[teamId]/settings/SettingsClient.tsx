@@ -25,7 +25,7 @@ export type TeamSettings = {
 
   defaultLocations: string[];
   defaultStartTime: string;
-  defaultDurationMinutes: number;
+  defaultEndTime: string;
   attendanceDeadlineHoursBefore: number;
 
   defaultDivideBy: "team_count" | "members_per_team";
@@ -238,29 +238,52 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
     }
   };
 
-  const saveScheduleDefaults = () => {
-    // 日程デフォルトはDBにカラムがないためlocalStorageに保存
+  const [schedSaving, setSchedSaving] = useState(false);
+  const saveScheduleDefaults = async () => {
+    setSchedSaving(true);
     try {
-      localStorage.setItem(`playknot-schedule-defaults-${teamId}`, JSON.stringify({
-        defaultLocations: settings.defaultLocations,
-        defaultStartTime: settings.defaultStartTime,
-        defaultDurationMinutes: settings.defaultDurationMinutes,
-        attendanceDeadlineHoursBefore: settings.attendanceDeadlineHoursBefore,
-      }));
-    } catch { /* noop */ }
-    toast.success("日程のデフォルト設定を保存しました");
+      const res = await fetch("/api/teams/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamId,
+          default_locations: settings.defaultLocations,
+          default_start_time: settings.defaultStartTime,
+          default_end_time: settings.defaultEndTime,
+          attendance_deadline_hours_before: settings.attendanceDeadlineHoursBefore,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("日程のデフォルト設定を保存しました");
+    } catch {
+      toast.error("日程のデフォルト設定の保存に失敗しました");
+    } finally {
+      setSchedSaving(false);
+    }
   };
 
-  const saveDivideDefaults = () => {
+  const [divideSaving, setDivideSaving] = useState(false);
+  const saveDivideDefaults = async () => {
+    setDivideSaving(true);
     try {
-      localStorage.setItem(`playknot-divide-defaults-${teamId}`, JSON.stringify({
-        defaultDivideBy: settings.defaultDivideBy,
-        defaultDivideValue: settings.defaultDivideValue,
-        defaultDivideMethod: settings.defaultDivideMethod,
-        autoSelectAttendees: settings.autoSelectAttendees,
-      }));
-    } catch { /* noop */ }
-    toast.success("チーム分けのデフォルト設定を保存しました");
+      const res = await fetch("/api/teams/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamId,
+          default_divide_by: settings.defaultDivideBy,
+          default_divide_value: settings.defaultDivideValue,
+          default_divide_method: settings.defaultDivideMethod,
+          auto_select_attendees: settings.autoSelectAttendees,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("チーム分けのデフォルト設定を保存しました");
+    } catch {
+      toast.error("チーム分けのデフォルト設定の保存に失敗しました");
+    } finally {
+      setDivideSaving(false);
+    }
   };
 
   const generateInvite = async () => {
@@ -692,20 +715,13 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="default-duration">デフォルト所要時間</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="default-duration"
-                  type="number"
-                  min={15}
-                  step={15}
-                  max={480}
-                  value={settings.defaultDurationMinutes}
-                  onChange={(e) => update("defaultDurationMinutes", parseInt(e.target.value, 10) || 60)}
-                  className="flex-1"
-                />
-                <span className="text-sm text-gray-500">分</span>
-              </div>
+              <Label htmlFor="default-end">デフォルト終了時刻</Label>
+              <Input
+                id="default-end"
+                type="time"
+                value={settings.defaultEndTime}
+                onChange={(e) => update("defaultEndTime", e.target.value)}
+              />
             </div>
           </div>
 
@@ -727,7 +743,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={saveScheduleDefaults} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">保存</Button>
+            <Button onClick={saveScheduleDefaults} disabled={schedSaving} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">{schedSaving ? "保存中..." : "保存"}</Button>
           </div>
         </div>
       </Section>
@@ -814,7 +830,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
           />
 
           <div className="flex justify-end">
-            <Button onClick={saveDivideDefaults} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">保存</Button>
+            <Button onClick={saveDivideDefaults} disabled={divideSaving} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">{divideSaving ? "保存中..." : "保存"}</Button>
           </div>
         </div>
       </Section>

@@ -49,9 +49,11 @@ export type Schedule = {
   id: string;
   team_id: string;
   date: string;
+  end_date: string | null;
   location: string;
   note: string | null;
-  capacity: number | null; // 定員（null の場合は無制限）
+  capacity: number | null;
+  deadline: string | null;
   created_by: string | null;
   created_at: string;
 };
