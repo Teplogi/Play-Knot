@@ -239,32 +239,63 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
   };
 
   const saveScheduleDefaults = () => {
+    // 日程デフォルトはDBにカラムがないためlocalStorageに保存
+    try {
+      localStorage.setItem(`playknot-schedule-defaults-${teamId}`, JSON.stringify({
+        defaultLocations: settings.defaultLocations,
+        defaultStartTime: settings.defaultStartTime,
+        defaultDurationMinutes: settings.defaultDurationMinutes,
+        attendanceDeadlineHoursBefore: settings.attendanceDeadlineHoursBefore,
+      }));
+    } catch { /* noop */ }
     toast.success("日程のデフォルト設定を保存しました");
   };
 
   const saveDivideDefaults = () => {
+    try {
+      localStorage.setItem(`playknot-divide-defaults-${teamId}`, JSON.stringify({
+        defaultDivideBy: settings.defaultDivideBy,
+        defaultDivideValue: settings.defaultDivideValue,
+        defaultDivideMethod: settings.defaultDivideMethod,
+        autoSelectAttendees: settings.autoSelectAttendees,
+      }));
+    } catch { /* noop */ }
     toast.success("チーム分けのデフォルト設定を保存しました");
   };
 
-  const generateInvite = () => {
-    // 発行はイベントハンドラ内なので Date.now() を呼んでよい
-    const ts = Date.now();
-    const token = Math.random().toString(36).slice(2, 14);
-    const newInvite: InviteLink = {
-      id: `inv-${ts}`,
-      token,
-      createdAt: new Date(ts).toISOString(),
-      expiresAt: new Date(ts + settings.defaultExpirationDays * 24 * 60 * 60 * 1000).toISOString(),
-      usedAt: null,
-      expired: false,
-    };
-    setInvites((prev) => [newInvite, ...prev]);
-    toast.success("招待リンクを発行しました");
+  const generateInvite = async () => {
+    try {
+      const res = await fetch("/api/invite/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, expirationDays: settings.defaultExpirationDays }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const newInvite: InviteLink = {
+        id: data.id,
+        token: data.token,
+        createdAt: data.created_at,
+        expiresAt: data.expires_at,
+        usedAt: null,
+        expired: false,
+      };
+      setInvites((prev) => [newInvite, ...prev]);
+      toast.success("招待リンクを発行しました");
+    } catch {
+      toast.error("招待リンクの発行に失敗しました");
+    }
   };
 
-  const revokeInvite = (id: string) => {
-    setInvites((prev) => prev.filter((i) => i.id !== id));
-    toast.success("招待リンクを無効化しました");
+  const revokeInvite = async (id: string) => {
+    try {
+      const res = await fetch(`/api/invite/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setInvites((prev) => prev.filter((i) => i.id !== id));
+      toast.success("招待リンクを無効化しました");
+    } catch {
+      toast.error("招待リンクの削除に失敗しました");
+    }
   };
 
   const copyInvite = async (token: string) => {
@@ -291,23 +322,40 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
     update("defaultLocations", settings.defaultLocations.filter((l) => l !== loc));
   };
 
-  const confirmTransfer = () => {
+  const confirmTransfer = async () => {
     if (!transferTargetId) return;
     const target = members.find((m) => m.id === transferTargetId);
-    setTransferOpen(false);
-    setTransferTargetId(null);
-    toast.success(`オーナーを ${target?.name ?? ""} に譲渡しました（モック）`);
+    try {
+      const res = await fetch("/api/teams/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, newOwnerId: transferTargetId }),
+      });
+      if (!res.ok) throw new Error();
+      setTransferOpen(false);
+      setTransferTargetId(null);
+      toast.success(`オーナーを ${target?.name ?? ""} に譲渡しました`);
+      router.refresh();
+    } catch {
+      toast.error("オーナーの譲渡に失敗しました");
+    }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteConfirmText !== settings.name) {
       toast.error("チーム名が一致しません");
       return;
     }
-    setDeleteOpen(false);
-    setDeleteConfirmText("");
-    toast.success("チームを削除しました（モック）");
-    router.push("/teams");
+    try {
+      const res = await fetch(`/api/teams/${teamId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setDeleteOpen(false);
+      setDeleteConfirmText("");
+      toast.success("チームを削除しました");
+      router.push("/teams");
+    } catch {
+      toast.error("チームの削除に失敗しました");
+    }
   };
 
   const formatDate = (iso: string) => {

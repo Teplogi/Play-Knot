@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
 export default function Home() {
-  // TODO: Supabase接続後に "/login" に戻す
+  // proxy.ts で認証チェック済み：未ログイン→/login、ログイン済み→/teams にリダイレクト
   redirect("/teams");
 }
