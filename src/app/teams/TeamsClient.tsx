@@ -63,16 +63,37 @@ export function TeamsClient({ userName, teams }: { userName: string; teams: Team
   const [newTeamName, setNewTeamName] = useState("");
   const [newSportType, setNewSportType] = useState("");
 
-  const handleCreate = () => {
+  const [creating, setCreating] = useState(false);
+
+  const handleCreate = async () => {
     if (!newTeamName.trim()) {
       toast.error("チーム名を入力してください");
       return;
     }
-    // TODO: Supabase接続後に実際のAPIを呼ぶ
-    toast.success(`「${newTeamName}」を作成しました（モック）`);
-    setCreateOpen(false);
-    setNewTeamName("");
-    setNewSportType("");
+    setCreating(true);
+    try {
+      const res = await fetch("/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newTeamName, sportType: newSportType }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "チームの作成に失敗しました");
+        return;
+      }
+      const team = await res.json();
+      toast.success(`「${newTeamName}」を作成しました`);
+      setCreateOpen(false);
+      setNewTeamName("");
+      setNewSportType("");
+      // 作成したチームに遷移
+      window.location.href = `/teams/${team.id}`;
+    } catch {
+      toast.error("エラーが発生しました");
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -209,10 +230,10 @@ export function TeamsClient({ userName, teams }: { userName: string; teams: Team
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={!newTeamName.trim()}
+              disabled={!newTeamName.trim() || creating}
               className="rounded-lg bg-indigo-600 hover:bg-indigo-700"
             >
-              作成する
+              {creating ? "作成中..." : "作成する"}
             </Button>
           </DialogFooter>
         </DialogContent>
