@@ -87,8 +87,8 @@ export function TeamsClient({ userName, teams }: { userName: string; teams: Team
       setCreateOpen(false);
       setNewTeamName("");
       setNewSportType("");
-      // 作成したチームに遷移
-      window.location.href = `/teams/${team.id}`;
+      // チーム一覧をリロードして新しいチームを表示
+      window.location.href = "/teams";
     } catch {
       toast.error("エラーが発生しました");
     } finally {
