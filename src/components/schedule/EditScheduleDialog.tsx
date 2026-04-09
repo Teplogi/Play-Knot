@@ -19,34 +19,52 @@ type EditScheduleDialogProps = {
   schedule: Schedule;
 };
 
+function toJSTDate(iso: string) {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function toJSTTime(iso: string) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export function EditScheduleDialog({ schedule }: EditScheduleDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // datetime-localの形式に変換（JST）
-  const toLocalDatetime = (iso: string) => {
-    const d = new Date(iso);
-    const offset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - offset).toISOString().slice(0, 16);
-  };
-  const initialDate = toLocalDatetime(schedule.date);
-  const [date, setDate] = useState(initialDate);
+  const [dateVal, setDateVal] = useState(toJSTDate(schedule.date));
+  const [startTime, setStartTime] = useState(toJSTTime(schedule.date));
+  const [endTime, setEndTime] = useState(schedule.end_date ? toJSTTime(schedule.end_date) : "");
   const [location, setLocation] = useState(schedule.location);
   const [note, setNote] = useState(schedule.note || "");
   const [capacity, setCapacity] = useState<string>(
     schedule.capacity !== null && schedule.capacity !== undefined ? String(schedule.capacity) : ""
   );
+  const [deadline, setDeadline] = useState(() => {
+    if (!schedule.deadline) return "";
+    const d = new Date(schedule.deadline);
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !location) return;
+    if (!dateVal || !startTime || !location) return;
 
     const capacityNum = capacity.trim() === "" ? null : parseInt(capacity, 10);
     if (capacityNum !== null && (isNaN(capacityNum) || capacityNum < 1)) {
       toast.error("定員は1以上の数字を入力してください");
       return;
     }
+
+    const dateStart = `${dateVal}T${startTime}:00+09:00`;
+    const dateEnd = endTime ? `${dateVal}T${endTime}:00+09:00` : null;
+    const deadlineISO = deadline ? deadline + ":00+09:00" : null;
 
     setLoading(true);
     try {
@@ -56,10 +74,12 @@ export function EditScheduleDialog({ schedule }: EditScheduleDialogProps) {
         body: JSON.stringify({
           scheduleId: schedule.id,
           teamId: schedule.team_id,
-          date: date.includes("+") ? date : date + ":00+09:00",
+          date: dateStart,
+          endDate: dateEnd,
           location,
           note,
           capacity: capacityNum,
+          deadline: deadlineISO,
         }),
       });
 
@@ -120,14 +140,35 @@ export function EditScheduleDialog({ schedule }: EditScheduleDialogProps) {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="edit-date">日時</Label>
+            <Label htmlFor="edit-date">日付</Label>
             <Input
               id="edit-date"
-              type="datetime-local"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+              type="date"
+              value={dateVal}
+              onChange={(e) => setDateVal(e.target.value)}
               required
             />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="edit-start-time">開始時刻</Label>
+              <Input
+                id="edit-start-time"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-end-time">終了時刻（任意）</Label>
+              <Input
+                id="edit-end-time"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
+            </div>
           </div>
           <div>
             <Label htmlFor="edit-location">場所</Label>
@@ -138,20 +179,31 @@ export function EditScheduleDialog({ schedule }: EditScheduleDialogProps) {
               required
             />
           </div>
-          <div>
-            <Label htmlFor="edit-capacity">定員（任意）</Label>
-            <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="edit-capacity">定員（任意）</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="edit-capacity"
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={capacity}
+                  onChange={(e) => setCapacity(e.target.value)}
+                  placeholder="無制限"
+                  className="w-full"
+                />
+                <span className="text-sm text-muted-foreground flex-shrink-0">人</span>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-deadline">回答締切（任意）</Label>
               <Input
-                id="edit-capacity"
-                type="number"
-                min={1}
-                max={100}
-                value={capacity}
-                onChange={(e) => setCapacity(e.target.value)}
-                placeholder="無制限"
-                className="w-32"
+                id="edit-deadline"
+                type="datetime-local"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
               />
-              <span className="text-sm text-muted-foreground">人（空欄なら無制限）</span>
             </div>
           </div>
           <div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,42 +28,27 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [date, setDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [dateVal, setDateVal] = useState("");
+  const [startTime, setStartTime] = useState(defaults?.startTime ?? "19:00");
+  const [endTime, setEndTime] = useState(defaults?.endTime ?? "21:00");
   const [location, setLocation] = useState("");
   const [note, setNote] = useState("");
   const [capacity, setCapacity] = useState<string>("");
   const [deadline, setDeadline] = useState("");
 
-  // ダイアログを開いた時にデフォルト値を適用
-  useEffect(() => {
-    if (open && defaults) {
-      // 日付部分が入力済みならデフォルト時刻を適用
-      if (date && defaults.startTime && !date.includes("T")) {
-        setDate(date + "T" + defaults.startTime);
-      }
-    }
-  }, [open]);
-
-  // 開始日時が変わった時に終了時刻・締切を自動設定
-  useEffect(() => {
-    if (date && defaults?.endTime && !endDate) {
-      const datePart = date.split("T")[0];
-      if (datePart) {
-        setEndDate(datePart + "T" + defaults.endTime);
-      }
-    }
-  }, [date]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !location) return;
+    if (!dateVal || !startTime || !location) return;
 
     const capacityNum = capacity.trim() === "" ? null : parseInt(capacity, 10);
     if (capacityNum !== null && (isNaN(capacityNum) || capacityNum < 1)) {
       toast.error("定員は1以上の数字を入力してください");
       return;
     }
+
+    const dateStart = `${dateVal}T${startTime}:00+09:00`;
+    const dateEnd = endTime ? `${dateVal}T${endTime}:00+09:00` : null;
+    const deadlineISO = deadline ? deadline + ":00+09:00" : null;
 
     setLoading(true);
     try {
@@ -72,12 +57,12 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           teamId,
-          date: date + ":00+09:00",
-          endDate: endDate ? endDate + ":00+09:00" : null,
+          date: dateStart,
+          endDate: dateEnd,
           location,
           note,
           capacity: capacityNum,
-          deadline: deadline ? deadline + ":00+09:00" : null,
+          deadline: deadlineISO,
         }),
       });
 
@@ -89,8 +74,9 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
 
       toast.success("日程を作成しました");
       setOpen(false);
-      setDate("");
-      setEndDate("");
+      setDateVal("");
+      setStartTime(defaults?.startTime ?? "19:00");
+      setEndTime(defaults?.endTime ?? "21:00");
       setLocation("");
       setNote("");
       setCapacity("");
@@ -113,24 +99,34 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
           <DialogTitle>新規日程を作成</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="date">日付</Label>
+            <Input
+              id="date"
+              type="date"
+              value={dateVal}
+              onChange={(e) => setDateVal(e.target.value)}
+              required
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="date">開始日時</Label>
+              <Label htmlFor="start-time">開始時刻</Label>
               <Input
-                id="date"
-                type="datetime-local"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                id="start-time"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
                 required
               />
             </div>
             <div>
-              <Label htmlFor="end-date">終了日時（任意）</Label>
+              <Label htmlFor="end-time">終了時刻（任意）</Label>
               <Input
-                id="end-date"
-                type="datetime-local"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                id="end-time"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
               />
             </div>
           </div>
