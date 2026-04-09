@@ -253,7 +253,11 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
           attendance_deadline_hours_before: settings.attendanceDeadlineHoursBefore,
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("saveScheduleDefaults error:", res.status, err);
+        throw new Error();
+      }
       toast.success("日程のデフォルト設定を保存しました");
     } catch {
       toast.error("日程のデフォルト設定の保存に失敗しました");

@@ -84,19 +84,19 @@ export async function PATCH(request: Request) {
         .update({ ...fields, updated_at: new Date().toISOString() })
         .eq("team_id", teamId);
       if (error) {
-        return NextResponse.json({ error: "更新に失敗しました" }, { status: 500 });
+        return NextResponse.json({ error: "更新に失敗しました", detail: error.message }, { status: 500 });
       }
     } else {
       const { error } = await admin
         .from("team_settings")
         .insert({ team_id: teamId, ...fields });
       if (error) {
-        return NextResponse.json({ error: "作成に失敗しました" }, { status: 500 });
+        return NextResponse.json({ error: "作成に失敗しました", detail: error.message }, { status: 500 });
       }
     }
 
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: "サーバーエラー" }, { status: 500 });
+  } catch (e) {
+    return NextResponse.json({ error: "サーバーエラー", detail: String(e) }, { status: 500 });
   }
 }
