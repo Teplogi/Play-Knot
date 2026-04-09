@@ -158,11 +158,21 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
   const saveAccount = async () => {
     setAccountSaving(true);
     try {
-      // TODO: Supabase接続後に実際のAPIを呼ぶ
-      await new Promise((r) => setTimeout(r, 300));
-      // 日程表示の設定を localStorage にも反映
+      const res = await fetch("/api/account", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: account.displayName,
+          gender: account.gender,
+          birth_year: account.birthYear,
+          position: account.position,
+        }),
+      });
+      if (!res.ok) throw new Error();
       try { localStorage.setItem("playknot-schedule-view", account.scheduleView); } catch { /* noop */ }
       toast.success("アカウント情報を保存しました");
+    } catch {
+      toast.error("アカウント情報の保存に失敗しました");
     } finally {
       setAccountSaving(false);
     }
@@ -187,8 +197,28 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
   };
 
   // ---- Section handlers ----
-  const saveBasic = () => {
-    toast.success("基本情報を保存しました");
+  const [basicSaving, setBasicSaving] = useState(false);
+  const saveBasic = async () => {
+    setBasicSaving(true);
+    try {
+      const res = await fetch("/api/teams/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamId,
+          name: settings.name,
+          sportType: settings.sportType,
+          description: settings.description,
+          iconColor: settings.iconColor,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("基本情報を保存しました");
+    } catch {
+      toast.error("基本情報の保存に失敗しました");
+    } finally {
+      setBasicSaving(false);
+    }
   };
 
   const saveNotifications = async () => {

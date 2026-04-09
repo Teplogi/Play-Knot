@@ -20,6 +20,7 @@ export default async function TeamsPage() {
     .select("role, teams(id, name, sport_type, icon_color, created_at)")
     .eq("user_id", user.id);
 
+
   const teams = (memberships ?? []).map((m) => {
     const t = m.teams as unknown as {
       id: string;
