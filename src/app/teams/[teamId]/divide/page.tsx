@@ -25,17 +25,22 @@ export default async function DividePage({
 
   const isHost = hasHostPrivilege(membership?.role ?? "guest");
 
-  // メンバー一覧（gender は team_members から取得）
+  // メンバー一覧（gender は users テーブルのアカウント設定を優先）
   const { data: rawMembers } = await supabase
     .from("team_members")
-    .select("user_id, gender, users(name)")
+    .select("user_id, gender, users(name, gender)")
     .eq("team_id", teamId);
 
-  const registeredMembers: Member[] = (rawMembers ?? []).map((m) => ({
-    id: m.user_id,
-    name: (m.users as unknown as { name: string })?.name ?? "不明",
-    gender: m.gender as "男" | "女" | "未設定",
-  }));
+  const registeredMembers: Member[] = (rawMembers ?? []).map((m) => {
+    const u = m.users as unknown as { name: string; gender: string } | null;
+    // users.gender（アカウント設定）を優先、未設定ならteam_members.genderにフォールバック
+    const gender = (u?.gender && u.gender !== "未設定" ? u.gender : m.gender) as "男" | "女" | "未設定";
+    return {
+      id: m.user_id,
+      name: u?.name ?? "不明",
+      gender,
+    };
+  });
 
   // 次回日程の参加者ID一覧（自動選択用）
   const now = new Date().toISOString();
