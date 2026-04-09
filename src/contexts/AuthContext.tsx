@@ -1,11 +1,10 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createClient } from "@/lib/supabase/client";
 import type { User, TeamRole } from "@/types";
 import { hasHostPrivilege } from "@/types";
 import type { User as AuthUser } from "@supabase/supabase-js";
-
-// TODO: Supabase接続後にuseEffect版に戻す
 
 type AuthContextType = {
   authUser: AuthUser | null;
@@ -22,31 +21,74 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [teamRole, setTeamRole] = useState<TeamRole | null>("host");
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [teamRole, setTeamRole] = useState<TeamRole | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // UIプレビュー用のモックユーザー
-  const mockUser: User = {
-    id: "mock-user-id",
-    name: "テストユーザー",
-    email: "test@example.com",
-    gender: "未設定",
-    birth_year: null,
-    position: "",
-    created_at: new Date().toISOString(),
-  };
+  useEffect(() => {
+    const supabase = createClient();
+
+    // 現在のセッションを取得
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setAuthUser(session.user);
+        await fetchUser(session.user.id);
+      }
+      setLoading(false);
+    };
+
+    // ユーザー情報を取得
+    const fetchUser = async (userId: string) => {
+      const { data } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      if (data) {
+        setUser(data as User);
+      }
+    };
+
+    getSession();
+
+    // 認証状態の変化を監視
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) {
+          setAuthUser(session.user);
+          await fetchUser(session.user.id);
+        } else {
+          setAuthUser(null);
+          setUser(null);
+          setTeamRole(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const isHost = () => teamRole === "host";
   const isCoHost = () => teamRole === "co_host";
   const hasHostPriv = () => hasHostPrivilege(teamRole);
-  const signOut = async () => { /* no-op for preview */ };
+
+  const signOut = async () => {
+    const supabase = createClient();
+    // signOut を待たずにローカルセッションをクリアしてリダイレクト
+    supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    window.location.href = "/login";
+  };
 
   return (
     <AuthContext.Provider
       value={{
-        authUser: null,
-        user: mockUser,
+        authUser,
+        user,
         teamRole,
-        loading: false,
+        loading,
         isHost,
         isCoHost,
         hasHostPrivilege: hasHostPriv,

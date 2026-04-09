@@ -1,4 +1,5 @@
-// TODO: Supabase接続後に元のServer Component版に戻す
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { NgListClient } from "./NgListClient";
 
 export default async function NgListPage({
@@ -7,20 +8,35 @@ export default async function NgListPage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  const mockPairs = [
-    { id: "ng1", team_id: teamId, created_at: "2024-03-01T10:00:00Z", user_a: { id: "u1", name: "田中太郎" }, user_b: { id: "u3", name: "鈴木一郎" } },
-    { id: "ng2", team_id: teamId, created_at: "2024-03-05T14:00:00Z", user_a: { id: "u2", name: "佐藤花子" }, user_b: { id: "u5", name: "高橋美咲" } },
-  ];
+  // NGペア一覧（ユーザー名つき）
+  const { data: rawPairs } = await supabase
+    .from("ng_pairs")
+    .select("id, team_id, created_at, user_a:users!ng_pairs_user_id_a_fkey(id, name), user_b:users!ng_pairs_user_id_b_fkey(id, name)")
+    .eq("team_id", teamId)
+    .order("created_at", { ascending: false });
 
-  const mockMembers = [
-    { id: "u1", name: "田中太郎" },
-    { id: "u2", name: "佐藤花子" },
-    { id: "u3", name: "鈴木一郎" },
-    { id: "u4", name: "山田次郎" },
-    { id: "u5", name: "高橋美咲" },
-    { id: "u6", name: "中村大輔" },
-  ];
+  const pairs = (rawPairs ?? []).map((p) => ({
+    id: p.id,
+    team_id: p.team_id,
+    created_at: p.created_at,
+    user_a: p.user_a as unknown as { id: string; name: string },
+    user_b: p.user_b as unknown as { id: string; name: string },
+  }));
 
-  return <NgListClient teamId={teamId} initialPairs={mockPairs} members={mockMembers} />;
+  // メンバー一覧（ドロップダウン用）
+  const { data: rawMembers } = await supabase
+    .from("team_members")
+    .select("users(id, name)")
+    .eq("team_id", teamId);
+
+  const members = (rawMembers ?? []).map((m) => {
+    const u = m.users as unknown as { id: string; name: string };
+    return { id: u.id, name: u.name };
+  });
+
+  return <NgListClient teamId={teamId} initialPairs={pairs} members={members} />;
 }

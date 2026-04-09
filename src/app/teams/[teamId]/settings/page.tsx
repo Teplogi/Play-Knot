@@ -1,15 +1,7 @@
-// TODO: Supabase接続後にサーバー側から TeamSettings を取得して渡す
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { SettingsClient, type TeamSettings, type InviteLink, type NotificationPref, type AccountSettings } from "./SettingsClient";
 import type { TeamRole } from "@/types";
-
-const mockMembers: { id: string; name: string; role: TeamRole }[] = [
-  { id: "u1", name: "田中太郎", role: "host" },
-  { id: "u2", name: "佐藤花子", role: "co_host" },
-  { id: "u3", name: "鈴木一郎", role: "guest" },
-  { id: "u4", name: "山田次郎", role: "guest" },
-  { id: "u5", name: "高橋美咲", role: "guest" },
-  { id: "u6", name: "伊藤健太", role: "guest" },
-];
 
 export default async function SettingsPage({
   params,
@@ -17,79 +9,112 @@ export default async function SettingsPage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  // UIプレビュー用のモックロール (layout.tsx のモックと揃える)
-  const mockRoles: Record<string, TeamRole> = {
-    "team-1": "host",
-    "team-2": "guest",
-    "team-3": "co_host",
-  };
-  const role: TeamRole = mockRoles[teamId] ?? "host";
+  // ロール
+  const { data: membership } = await supabase
+    .from("team_members")
+    .select("role")
+    .eq("team_id", teamId)
+    .eq("user_id", user.id)
+    .single();
 
-  // モック用の固定日時（本番では DB から取得し、expired は DB の expires_at から計算）
-  const mockInvites: InviteLink[] = [
-    {
-      id: "inv-1",
-      token: "abc123def456",
-      createdAt: "2026-04-04T00:00:00Z",
-      expiresAt: "2026-04-11T00:00:00Z",
-      usedAt: null,
-      expired: false,
-    },
-    {
-      id: "inv-2",
-      token: "xyz789uvw012",
-      createdAt: "2026-03-27T00:00:00Z",
-      expiresAt: "2026-04-03T00:00:00Z",
-      usedAt: "2026-04-02T00:00:00Z",
-      expired: true,
-    },
-  ];
+  const role = (membership?.role ?? "guest") as TeamRole;
 
-  const mockSettings: TeamSettings = {
-    name: teamId === "team-2" ? "フットサルサークル" : "バスケットボール部",
-    description: "毎週水曜と土曜に活動しています。初心者歓迎！",
-    sportType: teamId === "team-2" ? "フットサル" : "バスケットボール",
-    iconColor: "indigo",
+  // チーム情報
+  const { data: team } = await supabase
+    .from("teams")
+    .select("name, sport_type, icon_color")
+    .eq("id", teamId)
+    .single();
 
+  const initialSettings: TeamSettings = {
+    name: team?.name ?? "",
+    description: "",
+    sportType: team?.sport_type ?? "",
+    iconColor: team?.icon_color ?? "indigo",
     defaultExpirationDays: 7,
-
-    defaultLocations: ["市民体育館 Aコート", "○○小学校 体育館"],
+    defaultLocations: [],
     defaultStartTime: "19:00",
     defaultDurationMinutes: 120,
     attendanceDeadlineHoursBefore: 1,
-
     defaultDivideBy: "team_count",
     defaultDivideValue: 2,
     defaultDivideMethod: "random",
     autoSelectAttendees: true,
   };
 
-  const mockAccount: AccountSettings = {
-    displayName: "テストユーザー",
-    gender: "未設定",
-    birthYear: 1995,
-    position: "",
-    scheduleView: "list",
+  // 招待リンク
+  const { data: rawInvites } = await supabase
+    .from("invite_tokens")
+    .select("id, token, created_at, expires_at, used_at")
+    .eq("team_id", teamId)
+    .order("created_at", { ascending: false });
+
+  const now = new Date();
+  const initialInvites: InviteLink[] = (rawInvites ?? []).map((inv) => ({
+    id: inv.id,
+    token: inv.token,
+    createdAt: inv.created_at,
+    expiresAt: inv.expires_at,
+    usedAt: inv.used_at,
+    expired: inv.used_at !== null || new Date(inv.expires_at) < now,
+  }));
+
+  // メンバー一覧（譲渡用）
+  const { data: rawMembers } = await supabase
+    .from("team_members")
+    .select("user_id, role, users(name)")
+    .eq("team_id", teamId);
+
+  const members = (rawMembers ?? []).map((m) => ({
+    id: m.user_id,
+    name: (m.users as unknown as { name: string })?.name ?? "不明",
+    role: m.role as TeamRole,
+  }));
+
+  // 通知設定
+  const { data: notifData } = await supabase
+    .from("notification_preferences")
+    .select("schedule_created, schedule_changed, reminder, deadline, reopened")
+    .eq("team_id", teamId)
+    .eq("user_id", user.id)
+    .single();
+
+  const initialNotificationPrefs: NotificationPref = {
+    schedule_created: notifData?.schedule_created ?? true,
+    schedule_changed: notifData?.schedule_changed ?? true,
+    reminder: notifData?.reminder ?? true,
+    deadline: notifData?.deadline ?? true,
+    reopened: notifData?.reopened ?? true,
   };
 
-  const mockNotificationPrefs: NotificationPref = {
-    schedule_created: true,
-    schedule_changed: true,
-    reminder: true,
-    deadline: true,
-    reopened: true,
+  // アカウント情報
+  const { data: profile } = await supabase
+    .from("users")
+    .select("name, gender, birth_year, position")
+    .eq("id", user.id)
+    .single();
+
+  const initialAccount: AccountSettings = {
+    displayName: profile?.name ?? "",
+    gender: (profile?.gender as "男" | "女" | "未設定") ?? "未設定",
+    birthYear: profile?.birth_year ?? null,
+    position: profile?.position ?? "",
+    scheduleView: "list",
   };
 
   return (
     <SettingsClient
       teamId={teamId}
       role={role}
-      initialSettings={mockSettings}
-      initialInvites={mockInvites}
-      members={mockMembers}
-      initialNotificationPrefs={mockNotificationPrefs}
-      initialAccount={mockAccount}
+      initialSettings={initialSettings}
+      initialInvites={initialInvites}
+      members={members}
+      initialNotificationPrefs={initialNotificationPrefs}
+      initialAccount={initialAccount}
     />
   );
 }

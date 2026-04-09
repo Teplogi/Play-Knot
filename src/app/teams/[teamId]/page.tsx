@@ -1,5 +1,7 @@
-// TODO: Supabase接続後に元のServer Component版に戻す
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { TeamHomeClient } from "./TeamHomeClient";
+import { hasHostPrivilege } from "@/types";
 
 export default async function TeamHomePage({
   params,
@@ -7,38 +9,54 @@ export default async function TeamHomePage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  const mockSchedule = {
-    id: "schedule-1",
-    team_id: teamId,
-    date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-    location: "市民体育館 Aコート",
-    note: "シューズ持参",
-    capacity: 5,
-    created_by: "mock-user-id",
-    created_at: "2024-01-01",
-    attendances: [
-      { id: "a1", schedule_id: "schedule-1", user_id: "user-1", status: "attend" as const, comment: null, updated_at: "", created_at: "" },
-      { id: "a2", schedule_id: "schedule-1", user_id: "user-2", status: "attend" as const, comment: null, updated_at: "", created_at: "" },
-      { id: "a3", schedule_id: "schedule-1", user_id: "user-3", status: "absent" as const, comment: null, updated_at: "", created_at: "" },
-    ],
-  };
+  // ロール取得
+  const { data: membership } = await supabase
+    .from("team_members")
+    .select("role")
+    .eq("team_id", teamId)
+    .eq("user_id", user.id)
+    .single();
 
-  // layout.tsx の mockTeams と揃える（本番では team_members テーブルから取得）
-  const mockRoles: Record<string, "host" | "guest"> = {
-    "team-1": "host",
-    "team-2": "guest",
-  };
-  const isHost = (mockRoles[teamId] ?? "host") === "host";
+  const isHost = hasHostPrivilege(membership?.role ?? "guest");
+
+  // メンバー数
+  const { count: memberCount } = await supabase
+    .from("team_members")
+    .select("id", { count: "exact", head: true })
+    .eq("team_id", teamId);
+
+  // 次回日程（出欠つき）
+  const now = new Date().toISOString();
+  const { data: nextSchedule } = await supabase
+    .from("schedules")
+    .select("*, attendances(id, schedule_id, user_id, status, comment, updated_at, created_at)")
+    .eq("team_id", teamId)
+    .gte("date", now)
+    .order("date", { ascending: true })
+    .limit(1)
+    .single();
+
+  // 自分の出欠
+  const myAttendance = nextSchedule?.attendances?.find(
+    (a: { user_id: string }) => a.user_id === user.id
+  ) ?? null;
+
+  const attendCount = nextSchedule?.attendances?.filter(
+    (a: { status: string }) => a.status === "attend"
+  ).length ?? 0;
 
   return (
     <TeamHomeClient
       teamId={teamId}
       isHost={isHost}
-      memberCount={8}
-      nextSchedule={mockSchedule}
-      myAttendance={null}
-      attendCount={2}
+      memberCount={memberCount ?? 0}
+      nextSchedule={nextSchedule ?? null}
+      myAttendance={myAttendance}
+      attendCount={attendCount}
     />
   );
 }

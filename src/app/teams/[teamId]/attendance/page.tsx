@@ -1,16 +1,46 @@
-// TODO: Supabase接続後に元のServer Component版に戻す
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { AttendanceStatsClient } from "./AttendanceStatsClient";
-import type { MemberStats } from "@/lib/attendance/stats";
+import { calcMemberStats } from "@/lib/attendance/stats";
 
-export default async function AttendancePage() {
-  const mockStats: MemberStats[] = [
-    { userId: "u1", name: "田中太郎", attendCount: 12, absentCount: 2, attendanceRate: 85.7, samedayCancelCount: 0 },
-    { userId: "u2", name: "佐藤花子", attendCount: 10, absentCount: 4, attendanceRate: 71.4, samedayCancelCount: 1 },
-    { userId: "u3", name: "鈴木一郎", attendCount: 8, absentCount: 6, attendanceRate: 57.1, samedayCancelCount: 3 },
-    { userId: "u4", name: "山田次郎", attendCount: 13, absentCount: 1, attendanceRate: 92.9, samedayCancelCount: 0 },
-    { userId: "u5", name: "高橋美咲", attendCount: 5, absentCount: 9, attendanceRate: 35.7, samedayCancelCount: 4 },
-    { userId: "u6", name: "中村大輔", attendCount: 11, absentCount: 3, attendanceRate: 78.6, samedayCancelCount: 1 },
-  ];
+export default async function AttendancePage({
+  params,
+}: {
+  params: Promise<{ teamId: string }>;
+}) {
+  const { teamId } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  return <AttendanceStatsClient stats={mockStats} />;
+  // メンバー一覧
+  const { data: members } = await supabase
+    .from("team_members")
+    .select("user_id, users(name)")
+    .eq("team_id", teamId);
+
+  const memberInputs = (members ?? []).map((m) => ({
+    user_id: m.user_id,
+    name: (m.users as unknown as { name: string })?.name ?? "不明",
+  }));
+
+  // このチームの全出欠（スケジュール日付つき）
+  const { data: schedules } = await supabase
+    .from("schedules")
+    .select("id, date, attendances(user_id, status, created_at, updated_at)")
+    .eq("team_id", teamId);
+
+  const attendanceInputs = (schedules ?? []).flatMap((s) =>
+    (s.attendances ?? []).map((a: { user_id: string; status: "attend" | "absent"; created_at: string; updated_at: string }) => ({
+      user_id: a.user_id,
+      status: a.status,
+      created_at: a.created_at,
+      updated_at: a.updated_at,
+      schedule_date: s.date,
+    }))
+  );
+
+  const stats = calcMemberStats(memberInputs, attendanceInputs);
+
+  return <AttendanceStatsClient stats={stats} />;
 }
