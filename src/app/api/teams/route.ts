@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 // チーム作成
 export async function POST(request: Request) {
@@ -16,8 +17,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "チーム名は必須です" }, { status: 400 });
     }
 
+    // RLSをバイパスするためservice_roleクライアントを使用
+    // （チーム作成時はまだメンバーが存在しないためRLSポリシーを通過できない）
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     // チーム作成
-    const { data: team, error: teamError } = await supabase
+    const { data: team, error: teamError } = await admin
       .from("teams")
       .insert({
         name: name.trim(),
@@ -33,7 +41,7 @@ export async function POST(request: Request) {
     }
 
     // 作成者をホストとして追加
-    const { error: memberError } = await supabase
+    const { error: memberError } = await admin
       .from("team_members")
       .insert({
         team_id: team.id,
@@ -42,8 +50,7 @@ export async function POST(request: Request) {
       });
 
     if (memberError) {
-      // チーム作成は成功したがメンバー追加に失敗 → チームを削除
-      await supabase.from("teams").delete().eq("id", team.id);
+      await admin.from("teams").delete().eq("id", team.id);
       return NextResponse.json({ error: "チームの作成に失敗しました" }, { status: 500 });
     }
 
