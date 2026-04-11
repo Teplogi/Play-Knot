@@ -76,9 +76,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasHostPriv = () => hasHostPrivilege(teamRole);
 
   const signOut = async () => {
-    const supabase = createClient();
-    // signOut を待たずにローカルセッションをクリアしてリダイレクト
-    supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    // 1. サーバ側の httpOnly cookie をクリア（これが無いと
+    //    middleware の getUser() が通って /login → /teams に弾かれる）
+    try {
+      await fetch("/api/auth/signout", { method: "POST" });
+    } catch {
+      // ネットワークエラーは無視。クライアント側だけでも消して進める
+    }
+    // 2. クライアント側のローカルセッションもクリア
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      /* noop */
+    }
+    // 3. ページ全体をリロードして再描画
     window.location.href = "/login";
   };
 

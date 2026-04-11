@@ -109,17 +109,23 @@ export function TeamsClient({ userName, teams }: { userName: string; teams: Team
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-8 animate-page-in">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              おかえりなさい{userName ? `、${userName}さん` : ""}
+        <div className="flex items-end justify-between gap-3 mb-8">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+              おかえりなさい
+              {userName && (
+                <>
+                  <br />
+                  <span className="truncate">{userName}さん</span>
+                </>
+              )}
             </h1>
             <p className="text-gray-500 text-sm mt-1">チームを選択してください</p>
           </div>
           {teams.length > 0 && (
             <Button
               onClick={() => setCreateOpen(true)}
-              className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-sm h-9"
+              className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-sm h-9 flex-shrink-0"
             >
               + 新規作成
             </Button>
