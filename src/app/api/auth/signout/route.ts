@@ -10,12 +10,15 @@ import { cookies } from "next/headers";
 // cookie 削除が走らないことがある。直接削除すれば確実。
 export async function POST() {
   const response = NextResponse.json({ ok: true });
+  const isProd = process.env.NODE_ENV === "production";
 
   try {
     const cookieStore = await cookies();
     for (const c of cookieStore.getAll()) {
       if (c.name.startsWith("sb-")) {
-        // 同じ名前で空文字 + maxAge:0 を Response に乗せて確実に削除
+        // 同じ name + path で expires:0 を Set-Cookie する。
+        // 本番(HTTPS)では元 cookie が secure 属性付きなので、削除側も
+        // secure を立てておかないとブラウザが上書きを受け付けないことがある。
         response.cookies.set({
           name: c.name,
           value: "",
@@ -24,6 +27,7 @@ export async function POST() {
           expires: new Date(0),
           httpOnly: true,
           sameSite: "lax",
+          secure: isProd,
         });
       }
     }
