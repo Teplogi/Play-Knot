@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { buttonVariants } from "@/components/ui/button";
 import { MemberList } from "@/components/members/MemberList";
-import { InviteLink } from "@/components/members/InviteLink";
 import type { TeamMemberWithUser } from "@/types";
 
 type MembersClientProps = {
@@ -15,11 +16,14 @@ export function MembersClient({ teamId, initialMembers }: MembersClientProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-xl font-bold">メンバー管理</h2>
-        <div className="flex gap-2">
-          <InviteLink teamId={teamId} />
-        </div>
+        <Link
+          href={`/teams/${teamId}/settings#invite-links`}
+          className={buttonVariants({ variant: "outline" })}
+        >
+          招待リンクを発行
+        </Link>
       </div>
 
       <p className="text-sm text-muted-foreground">

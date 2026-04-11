@@ -84,16 +84,21 @@ const ICON_COLORS: { key: string; bg: string; label: string }[] = [
 ];
 
 function Section({
+  id,
   title,
   description,
   children,
 }: {
+  id?: string;
   title: string;
   description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6 space-y-5">
+    <section
+      id={id}
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6 space-y-5 scroll-mt-20"
+    >
       <div>
         <h3 className="font-bold text-gray-900">{title}</h3>
         {description && <p className="text-xs text-gray-500 mt-1">{description}</p>}
@@ -562,7 +567,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
 
       {/* 2. 招待リンク管理（ホスト・共同ホストのみ） */}
       {isHostOrCoHost && (
-      <Section title="招待リンク" description="新しいメンバーを招待するリンクを発行・管理します">
+      <Section id="invite-links" title="招待リンク" description="新しいメンバーを招待するリンクを発行・管理します">
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-end gap-3">
             <div className="space-y-2 flex-1">
@@ -708,23 +713,25 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
             <LocationAdder onAdd={addLocationPreset} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="default-start">デフォルト開始時刻</Label>
               <Input
                 id="default-start"
                 type="time"
                 value={settings.defaultStartTime}
                 onChange={(e) => update("defaultStartTime", e.target.value)}
+                className="w-full"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <Label htmlFor="default-end">デフォルト終了時刻</Label>
               <Input
                 id="default-end"
                 type="time"
                 value={settings.defaultEndTime}
                 onChange={(e) => update("defaultEndTime", e.target.value)}
+                className="w-full"
               />
             </div>
           </div>

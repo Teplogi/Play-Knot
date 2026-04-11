@@ -110,8 +110,8 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
               <Label htmlFor="start-time">開始時刻</Label>
               <Input
                 id="start-time"
@@ -119,15 +119,17 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 required
+                className="w-full"
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="end-time">終了時刻（任意）</Label>
               <Input
                 id="end-time"
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
+                className="w-full"
               />
             </div>
           </div>
@@ -155,8 +157,8 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
               </div>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
               <Label htmlFor="capacity">定員（任意）</Label>
               <div className="flex items-center gap-2">
                 <Input
@@ -172,13 +174,14 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
                 <span className="text-sm text-muted-foreground flex-shrink-0">人</span>
               </div>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="deadline">回答締切（任意）</Label>
               <Input
                 id="deadline"
                 type="datetime-local"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
+                className="w-full"
               />
             </div>
           </div>
