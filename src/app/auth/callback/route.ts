@@ -12,6 +12,14 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      // ログイン成功後、まず public.users 行の存在を保証する
+      // (DB トリガーが失敗しても招待や日程作成等で FK エラーにならないように)
+      try {
+        await ensurePublicUser(supabase);
+      } catch (e) {
+        console.error("ensurePublicUser failed:", e);
+      }
+
       // 招待トークンがある場合、チームに自動参加
       let joinedTeamId: string | null = null;
       if (token) {
@@ -32,6 +40,36 @@ export async function GET(request: Request) {
   return NextResponse.redirect(`${origin}/login`);
 }
 
+// auth.users 経由で作られた現ユーザに対応する public.users 行が
+// 確実に存在するようにする（DB トリガーが失敗していた場合の安全網）
+async function ensurePublicUser(
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const fallbackName =
+    (user.user_metadata?.full_name as string | undefined) ??
+    (user.user_metadata?.name as string | undefined) ??
+    (user.email ? user.email.split("@")[0] : "ユーザー");
+
+  await admin
+    .from("users")
+    .upsert(
+      {
+        id: user.id,
+        name: fallbackName,
+        email: user.email ?? "",
+      },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
+}
+
 // 招待トークンを処理してチームに参加させる
 // team_members の INSERT は RLS が「host のみ」を要求するため
 // service_role を使ってバイパスする必要がある
@@ -46,6 +84,8 @@ async function processInviteToken(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+
+  // 注: public.users 行の存在保証は呼び出し元の ensurePublicUser で済ませてある
 
   // トークン検索（used_at で絞らない: 過去に「used_at だけ更新されたが
   // team_members insert は失敗」という stuck 状態からの復旧を可能にする）
