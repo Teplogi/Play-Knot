@@ -76,8 +76,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasHostPriv = () => hasHostPrivilege(teamRole);
 
   const signOut = async () => {
-    // 1. サーバ側 cookie をクリア（必須: middleware の getUser() を
-    //    通さなくして /login にちゃんと止まれるようにする）
+    // サーバ側で sb-* cookie を全部削除する。
+    // クライアント側 supabase.auth.signOut() は呼ばない:
+    // 内部処理でハングしたり rate limit リトライで遅延することがあり、
+    // window.location まで到達しない事故が起きるため。
+    // window.location.replace でハードリロードすれば、次のページロード
+    // 時に AuthContext の useEffect が走って状態が再構築されるので
+    // クライアント側のクリーンアップは不要。
     try {
       await fetch("/api/auth/signout", {
         method: "POST",
@@ -86,14 +91,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       /* noop */
     }
-    // 2. クライアント側 (localStorage 等) もクリア
-    try {
-      const supabase = createClient();
-      await supabase.auth.signOut({ scope: "local" });
-    } catch {
-      /* noop */
-    }
-    // 3. ハードリロードで /login へ。replace で履歴に残さない
     window.location.replace("/login");
   };
 
