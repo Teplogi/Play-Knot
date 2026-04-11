@@ -67,8 +67,9 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.error || "日程の作成に失敗しました");
+        const data = await res.json().catch(() => ({}));
+        console.error("createSchedule error:", res.status, data);
+        toast.error(`${data.error || "日程の作成に失敗しました"}${data.detail ? `: ${data.detail}` : ""}`);
         return;
       }
 
