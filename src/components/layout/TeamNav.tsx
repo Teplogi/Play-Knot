@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasHostPrivilege } from "@/types";
 import type { TeamRole } from "@/types";
@@ -59,12 +59,33 @@ export function TeamNav({ teamId, teamName, role }: TeamNavProps) {
   const pathname = usePathname();
   const { setTeamRole, signOut } = useAuth();
   const navItems = getNavItems(teamId, role as TeamRole);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setTeamRole(role as TeamRole);
   }, [role, setTeamRole]);
 
-  // モバイルボトムナビに表示するアイテム（最大5つ）
+  // パス遷移時にドロワーを閉じる
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  // メニュー表示中はスクロールロック & Esc で閉じる
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  // モバイルボトムナビに表示するアイテム（最大4つ）
   const bottomNavItems = navItems.slice(0, 4);
 
   return (
@@ -125,20 +146,115 @@ export function TeamNav({ teamId, teamName, role }: TeamNavProps) {
       {/* モバイル：トップバー */}
       <header className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-200">
         <div className="flex items-center justify-between px-4 h-12">
-          <div className="flex items-center gap-2">
-            <Link href="/teams" className="text-gray-400 hover:text-gray-600" aria-label="チーム一覧へ戻る">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link href="/teams" className="text-gray-400 hover:text-gray-600 flex-shrink-0" aria-label="チーム一覧へ戻る">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
             </Link>
-            <div className="w-6 h-6 rounded bg-indigo-600 flex items-center justify-center">
+            <div className="w-6 h-6 rounded bg-indigo-600 flex items-center justify-center flex-shrink-0">
               <span className="text-white text-xs font-bold">{teamName.charAt(0)}</span>
             </div>
             <span className="font-bold text-sm text-gray-900 truncate">{teamName}</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut} className="text-gray-400 h-8 w-8 p-0" aria-label="ログアウト">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
-          </Button>
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            className="flex-shrink-0 inline-flex items-center justify-center h-9 w-9 -mr-2 rounded-lg text-gray-600 hover:bg-gray-100 active:bg-gray-200"
+            aria-label="メニューを開く"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav-drawer"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+            </svg>
+          </button>
         </div>
       </header>
+
+      {/* モバイル：スライドインメニュー */}
+      <div
+        className={`md:hidden fixed inset-0 z-40 transition-opacity duration-200 ${
+          menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        aria-hidden={!menuOpen}
+      >
+        {/* 背景オーバーレイ */}
+        <button
+          type="button"
+          aria-label="メニューを閉じる"
+          onClick={() => setMenuOpen(false)}
+          className="absolute inset-0 bg-black/40"
+        />
+        {/* ドロワー本体 */}
+        <aside
+          id="mobile-nav-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="ナビゲーションメニュー"
+          className={`absolute top-0 right-0 h-full w-72 max-w-[85%] bg-white shadow-xl flex flex-col transform transition-transform duration-200 ease-out ${
+            menuOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          {/* ヘッダー */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm font-bold">{teamName.charAt(0)}</span>
+              </div>
+              <span className="font-bold text-gray-900 text-sm truncate">{teamName}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(false)}
+              className="inline-flex items-center justify-center h-9 w-9 -mr-2 rounded-lg text-gray-500 hover:bg-gray-100"
+              aria-label="メニューを閉じる"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* ナビリンク */}
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="メニューナビゲーション">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMenuOpen(false)}
+                  aria-label={item.label}
+                  className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all duration-150 ${
+                    isActive
+                      ? "bg-indigo-50 text-indigo-700"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <NavIcon icon={item.icon} className={`w-5 h-5 ${isActive ? "text-indigo-600" : "text-gray-400"}`} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* ログアウト */}
+          <div className="p-3 border-t border-gray-100 safe-area-pb">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setMenuOpen(false);
+                signOut();
+              }}
+              className="w-full justify-start text-gray-600 hover:text-gray-900"
+              aria-label="ログアウト"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
+              ログアウト
+            </Button>
+          </div>
+        </aside>
+      </div>
 
       {/* モバイル：ボトムナビ */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md border-t border-gray-200 safe-area-pb" aria-label="ボトムナビゲーション">

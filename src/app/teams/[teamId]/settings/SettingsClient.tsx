@@ -564,7 +564,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
       {isHostOrCoHost && (
       <Section title="招待リンク" description="新しいメンバーを招待するリンクを発行・管理します">
         <div className="space-y-4">
-          <div className="flex items-end gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
             <div className="space-y-2 flex-1">
               <Label htmlFor="expiration">有効期限のデフォルト</Label>
               <div className="flex items-center gap-2">
@@ -580,7 +580,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
                 <span className="text-sm text-gray-500">日間</span>
               </div>
             </div>
-            <Button onClick={generateInvite} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">
+            <Button onClick={generateInvite} className="w-full sm:w-auto rounded-lg bg-indigo-600 hover:bg-indigo-700">
               + 新しい招待リンクを発行
             </Button>
           </div>
@@ -844,29 +844,29 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
       {isHost && (
       <Section title="危険な操作" description="これらの操作は元に戻せません">
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-4 rounded-lg border border-orange-200 bg-orange-50/50">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border border-orange-200 bg-orange-50/50">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900">オーナーを譲渡</p>
               <p className="text-xs text-gray-500 mt-0.5">別のメンバーにホスト権限を引き継ぎます</p>
             </div>
             <Button
               variant="outline"
               onClick={() => setTransferOpen(true)}
-              className="rounded-lg border-orange-300 text-orange-700 hover:bg-orange-100"
+              className="w-full sm:w-auto rounded-lg border-orange-300 text-orange-700 hover:bg-orange-100"
             >
               譲渡
             </Button>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-lg border border-red-200 bg-red-50/50">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border border-red-200 bg-red-50/50">
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900">チームを削除</p>
               <p className="text-xs text-gray-500 mt-0.5">チーム・メンバー・日程・出欠・NGリストが全て削除されます</p>
             </div>
             <Button
               variant="outline"
               onClick={() => setDeleteOpen(true)}
-              className="rounded-lg border-red-300 text-red-700 hover:bg-red-100"
+              className="w-full sm:w-auto rounded-lg border-red-300 text-red-700 hover:bg-red-100"
             >
               削除
             </Button>
