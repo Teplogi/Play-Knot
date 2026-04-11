@@ -6,6 +6,7 @@ export type User = {
   gender: "男" | "女" | "未設定";
   birth_year: number | null;
   position: string;
+  can_create_team: boolean;
   created_at: string;
 };
 

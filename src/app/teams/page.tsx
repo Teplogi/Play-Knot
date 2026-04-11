@@ -6,10 +6,10 @@ export default async function TeamsPage() {
   const user = await requireUser();
   const supabase = await createClient();
 
-  // ユーザー情報
+  // ユーザー情報（チーム新規作成権限フラグも取得）
   const { data: profile } = await supabase
     .from("users")
-    .select("name")
+    .select("name, can_create_team")
     .eq("id", user.id)
     .single();
 
@@ -67,5 +67,11 @@ export default async function TeamsPage() {
     }
   }
 
-  return <TeamsClient userName={profile?.name ?? ""} teams={teams} />;
+  return (
+    <TeamsClient
+      userName={profile?.name ?? ""}
+      teams={teams}
+      canCreateTeam={profile?.can_create_team ?? false}
+    />
+  );
 }

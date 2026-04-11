@@ -24,6 +24,21 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
+    // チーム新規作成権限チェック
+    // service_role を使うため RLS は効かない。サーバ側で明示的にチェック。
+    const { data: profile } = await admin
+      .from("users")
+      .select("can_create_team")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.can_create_team) {
+      return NextResponse.json(
+        { error: "チームの新規作成権限がありません" },
+        { status: 403 }
+      );
+    }
+
     // チーム作成
     const { data: team, error: teamError } = await admin
       .from("teams")
