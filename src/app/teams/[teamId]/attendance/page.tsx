@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { requireUser } from "@/lib/auth";
 import { AttendanceStatsClient } from "./AttendanceStatsClient";
 import { calcMemberStats } from "@/lib/attendance/stats";
@@ -11,10 +12,16 @@ export default async function AttendancePage({
   const { teamId } = await params;
   await requireUser();
   const supabase = await createClient();
+  // users JOIN は RLS が「自分のみ」のため service_role で取得。
+  // attendance ページは layout で host/co_host 限定のため認可は担保済み。
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   // メンバー / スケジュール+出欠 を並列取得
   const [membersRes, schedulesRes] = await Promise.all([
-    supabase.from("team_members").select("user_id, users(name)").eq("team_id", teamId),
+    admin.from("team_members").select("user_id, users(name)").eq("team_id", teamId),
     supabase
       .from("schedules")
       .select("id, date, attendances(user_id, status, created_at, updated_at)")

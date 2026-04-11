@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { requireUser, getTeamMembership } from "@/lib/auth";
 import { SettingsClient, type TeamSettings, type InviteLink, type NotificationPref, type AccountSettings } from "./SettingsClient";
 import type { TeamRole } from "@/types";
@@ -11,6 +12,12 @@ export default async function SettingsPage({
   const { teamId } = await params;
   const user = await requireUser();
   const supabase = await createClient();
+  // users JOIN は RLS が「自分のみ」のため、譲渡対象メンバー一覧を
+  // 全員ぶん取るには service_role が必要
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   // 全クエリを並列化
   const [
@@ -30,7 +37,7 @@ export default async function SettingsPage({
       .select("id, token, created_at, expires_at, used_at")
       .eq("team_id", teamId)
       .order("created_at", { ascending: false }),
-    supabase.from("team_members").select("user_id, role, users(name)").eq("team_id", teamId),
+    admin.from("team_members").select("user_id, role, users(name)").eq("team_id", teamId),
     supabase
       .from("notification_preferences")
       .select("schedule_created, schedule_changed, reminder, deadline, reopened")
