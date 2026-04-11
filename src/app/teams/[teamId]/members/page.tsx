@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { MembersClient } from "./MembersClient";
 import type { TeamMemberWithUser } from "@/types";
 
@@ -9,9 +9,8 @@ export default async function MembersPage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+  await requireUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const { data: members } = await supabase
     .from("team_members")

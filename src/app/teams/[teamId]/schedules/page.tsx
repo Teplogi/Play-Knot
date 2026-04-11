@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser, getTeamMembership } from "@/lib/auth";
 import { ScheduleListClient } from "./ScheduleListClient";
 import { hasHostPrivilege } from "@/types";
 
@@ -9,39 +9,32 @@ export default async function SchedulesPage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+  const user = await requireUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  // ロール
-  const { data: membership } = await supabase
-    .from("team_members")
-    .select("role")
-    .eq("team_id", teamId)
-    .eq("user_id", user.id)
-    .single();
+  // ロール / メンバー数 / 日程一覧 / チーム設定 を並列取得
+  const [membership, totalMembersRes, schedulesRes, teamSettingsRes] = await Promise.all([
+    getTeamMembership(teamId),
+    supabase
+      .from("team_members")
+      .select("id", { count: "exact", head: true })
+      .eq("team_id", teamId),
+    supabase
+      .from("schedules")
+      .select("*, attendances(id, schedule_id, user_id, status, comment, updated_at, created_at)")
+      .eq("team_id", teamId)
+      .order("date", { ascending: true }),
+    supabase
+      .from("team_settings")
+      .select("default_start_time, default_end_time, attendance_deadline_hours_before, default_locations")
+      .eq("team_id", teamId)
+      .single(),
+  ]);
 
   const canManageSchedule = hasHostPrivilege(membership?.role ?? "guest");
-
-  // メンバー数
-  const { count: totalMembers } = await supabase
-    .from("team_members")
-    .select("id", { count: "exact", head: true })
-    .eq("team_id", teamId);
-
-  // 日程一覧（出欠つき）
-  const { data: schedules } = await supabase
-    .from("schedules")
-    .select("*, attendances(id, schedule_id, user_id, status, comment, updated_at, created_at)")
-    .eq("team_id", teamId)
-    .order("date", { ascending: true });
-
-  // チーム設定（デフォルト値）
-  const { data: teamSettings } = await supabase
-    .from("team_settings")
-    .select("default_start_time, default_end_time, attendance_deadline_hours_before, default_locations")
-    .eq("team_id", teamId)
-    .single();
+  const totalMembers = totalMembersRes.count;
+  const schedules = schedulesRes.data;
+  const teamSettings = teamSettingsRes.data;
 
   const scheduleDefaults = teamSettings ? {
     startTime: teamSettings.default_start_time ?? "19:00",

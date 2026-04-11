@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser, getTeamMembership } from "@/lib/auth";
 import { SettingsClient, type TeamSettings, type InviteLink, type NotificationPref, type AccountSettings } from "./SettingsClient";
 import type { TeamRole } from "@/types";
 
@@ -9,33 +9,44 @@ export default async function SettingsPage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+  const user = await requireUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  // ロール
-  const { data: membership } = await supabase
-    .from("team_members")
-    .select("role")
-    .eq("team_id", teamId)
-    .eq("user_id", user.id)
-    .single();
+  // 全クエリを並列化
+  const [
+    membership,
+    teamRes,
+    teamSettingsRes,
+    rawInvitesRes,
+    rawMembersRes,
+    notifRes,
+    profileRes,
+  ] = await Promise.all([
+    getTeamMembership(teamId),
+    supabase.from("teams").select("name, sport_type, icon_color").eq("id", teamId).single(),
+    supabase.from("team_settings").select("*").eq("team_id", teamId).single(),
+    supabase
+      .from("invite_tokens")
+      .select("id, token, created_at, expires_at, used_at")
+      .eq("team_id", teamId)
+      .order("created_at", { ascending: false }),
+    supabase.from("team_members").select("user_id, role, users(name)").eq("team_id", teamId),
+    supabase
+      .from("notification_preferences")
+      .select("schedule_created, schedule_changed, reminder, deadline, reopened")
+      .eq("team_id", teamId)
+      .eq("user_id", user.id)
+      .single(),
+    supabase.from("users").select("name, gender, birth_year, position").eq("id", user.id).single(),
+  ]);
 
   const role = (membership?.role ?? "guest") as TeamRole;
-
-  // チーム情報
-  const { data: team } = await supabase
-    .from("teams")
-    .select("name, sport_type, icon_color")
-    .eq("id", teamId)
-    .single();
-
-  // チーム設定（日程デフォルト等）
-  const { data: teamSettings } = await supabase
-    .from("team_settings")
-    .select("*")
-    .eq("team_id", teamId)
-    .single();
+  const team = teamRes.data;
+  const teamSettings = teamSettingsRes.data;
+  const rawInvites = rawInvitesRes.data;
+  const rawMembers = rawMembersRes.data;
+  const notifData = notifRes.data;
+  const profile = profileRes.data;
 
   const initialSettings: TeamSettings = {
     name: team?.name ?? "",
@@ -53,13 +64,6 @@ export default async function SettingsPage({
     autoSelectAttendees: teamSettings?.auto_select_attendees ?? true,
   };
 
-  // 招待リンク
-  const { data: rawInvites } = await supabase
-    .from("invite_tokens")
-    .select("id, token, created_at, expires_at, used_at")
-    .eq("team_id", teamId)
-    .order("created_at", { ascending: false });
-
   const now = new Date();
   const initialInvites: InviteLink[] = (rawInvites ?? []).map((inv) => ({
     id: inv.id,
@@ -70,25 +74,11 @@ export default async function SettingsPage({
     expired: inv.used_at !== null || new Date(inv.expires_at) < now,
   }));
 
-  // メンバー一覧（譲渡用）
-  const { data: rawMembers } = await supabase
-    .from("team_members")
-    .select("user_id, role, users(name)")
-    .eq("team_id", teamId);
-
   const members = (rawMembers ?? []).map((m) => ({
     id: m.user_id,
     name: (m.users as unknown as { name: string })?.name ?? "不明",
     role: m.role as TeamRole,
   }));
-
-  // 通知設定
-  const { data: notifData } = await supabase
-    .from("notification_preferences")
-    .select("schedule_created, schedule_changed, reminder, deadline, reopened")
-    .eq("team_id", teamId)
-    .eq("user_id", user.id)
-    .single();
 
   const initialNotificationPrefs: NotificationPref = {
     schedule_created: notifData?.schedule_created ?? true,
@@ -97,13 +87,6 @@ export default async function SettingsPage({
     deadline: notifData?.deadline ?? true,
     reopened: notifData?.reopened ?? true,
   };
-
-  // アカウント情報
-  const { data: profile } = await supabase
-    .from("users")
-    .select("name, gender, birth_year, position")
-    .eq("id", user.id)
-    .single();
 
   const initialAccount: AccountSettings = {
     displayName: profile?.name ?? "",
