@@ -47,21 +47,26 @@ async function processInviteToken(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // トークンを検証
+  // トークン検索（used_at で絞らない: 過去に「used_at だけ更新されたが
+  // team_members insert は失敗」という stuck 状態からの復旧を可能にする）
   const { data: inviteToken, error: tokenErr } = await admin
     .from("invite_tokens")
     .select("*")
     .eq("token", token)
-    .is("used_at", null)
-    .gt("expires_at", new Date().toISOString())
-    .single();
+    .maybeSingle();
 
   if (tokenErr || !inviteToken) {
     console.error("invite token lookup failed:", tokenErr);
     return null;
   }
 
-  // 既にメンバーかチェック
+  // 期限切れチェック
+  if (new Date(inviteToken.expires_at) < new Date()) {
+    console.error("invite token expired");
+    return null;
+  }
+
+  // 既にメンバーならそのチーム ID を返す（冪等）
   const { data: existing } = await admin
     .from("team_members")
     .select("id")
@@ -71,6 +76,13 @@ async function processInviteToken(
 
   if (existing) {
     return inviteToken.team_id as string;
+  }
+
+  // 別人が既に使用済みなら拒否（セキュリティ維持）
+  // 自分が used_by なら復旧扱いで進める
+  if (inviteToken.used_at && inviteToken.used_by && inviteToken.used_by !== user.id) {
+    console.error("invite token already used by another user");
+    return null;
   }
 
   // guest としてチームに参加（service_role で RLS バイパス）
@@ -85,7 +97,7 @@ async function processInviteToken(
     return null;
   }
 
-  // トークンを使用済みにする
+  // トークンを使用済みにマーク
   const { error: updateErr } = await admin
     .from("invite_tokens")
     .update({ used_at: new Date().toISOString(), used_by: user.id })

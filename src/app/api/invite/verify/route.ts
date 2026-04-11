@@ -25,13 +25,12 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // トークンを検証
+    // トークン検索（used_at で絞らない: 復旧可能にする）
     const { data: inviteToken, error: tokenErr } = await admin
       .from("invite_tokens")
       .select("*")
       .eq("token", token)
-      .is("used_at", null)
-      .single();
+      .maybeSingle();
 
     if (tokenErr || !inviteToken) {
       return NextResponse.json(
@@ -45,7 +44,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "トークンの有効期限が切れています" }, { status: 400 });
     }
 
-    // 既にメンバーかチェック
+    // 既にメンバーならそのチーム ID を返す（冪等）
     const { data: existing } = await admin
       .from("team_members")
       .select("id")
@@ -55,6 +54,11 @@ export async function POST(request: Request) {
 
     if (existing) {
       return NextResponse.json({ teamId: inviteToken.team_id });
+    }
+
+    // 別人が既に使用済みなら拒否
+    if (inviteToken.used_at && inviteToken.used_by && inviteToken.used_by !== user.id) {
+      return NextResponse.json({ error: "この招待リンクは既に他のユーザに使用されています" }, { status: 400 });
     }
 
     // guest としてチームに参加（service_role で RLS バイパス）
