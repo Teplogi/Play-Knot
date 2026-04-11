@@ -76,22 +76,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasHostPriv = () => hasHostPrivilege(teamRole);
 
   const signOut = async () => {
-    // 1. サーバ側の httpOnly cookie をクリア（これが無いと
-    //    middleware の getUser() が通って /login → /teams に弾かれる）
+    // 1. サーバ側 cookie をクリア（必須: middleware の getUser() を
+    //    通さなくして /login にちゃんと止まれるようにする）
     try {
-      await fetch("/api/auth/signout", { method: "POST" });
+      await fetch("/api/auth/signout", {
+        method: "POST",
+        credentials: "include",
+      });
     } catch {
-      // ネットワークエラーは無視。クライアント側だけでも消して進める
+      /* noop */
     }
-    // 2. クライアント側のローカルセッションもクリア
+    // 2. クライアント側 (localStorage 等) もクリア
     try {
       const supabase = createClient();
       await supabase.auth.signOut({ scope: "local" });
     } catch {
       /* noop */
     }
-    // 3. ページ全体をリロードして再描画
-    window.location.href = "/login";
+    // 3. ハードリロードで /login へ。replace で履歴に残さない
+    window.location.replace("/login");
   };
 
   return (
