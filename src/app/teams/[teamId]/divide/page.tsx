@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { requireUser, getTeamMembership } from "@/lib/auth";
 import { DivideClient } from "./DivideClient";
 import { hasHostPrivilege } from "@/types";
@@ -14,11 +15,19 @@ export default async function DividePage({
   await requireUser();
   const supabase = await createClient();
 
+  // メンバー一覧は users テーブルの RLS が「自分のみ」になっているため
+  // guest だと他メンバーの users 行が NULL になってしまう。
+  // service_role で取得して全員の名前/性別を取れるようにする。
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   // ロール / メンバー / 次回日程 / NGペアを並列取得
   const now = new Date().toISOString();
   const [membership, rawMembersRes, nextScheduleRes, rawNgPairsRes] = await Promise.all([
     getTeamMembership(teamId),
-    supabase
+    admin
       .from("team_members")
       .select("user_id, gender, users(name, gender)")
       .eq("team_id", teamId),
@@ -30,7 +39,9 @@ export default async function DividePage({
       .order("date", { ascending: true })
       .limit(1)
       .single(),
-    supabase.from("ng_pairs").select("*").eq("team_id", teamId),
+    // NGペアも guest からは RLS で見えないが、divide アルゴリズムに
+    // 必要なので admin で取得（クライアント側で表示されないかは別途確認）
+    admin.from("ng_pairs").select("*").eq("team_id", teamId),
   ]);
 
   const isHost = hasHostPrivilege(membership?.role ?? "guest");

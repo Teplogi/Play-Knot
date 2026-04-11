@@ -50,7 +50,18 @@ export default async function TeamsPage() {
   }
 
   // 各チームの次回日程を取得
+  // Vercel サーバは UTC で動くため getHours() 等をそのまま使うと
+  // 9 時間ずれる。Asia/Tokyo を明示的に指定して整形する。
   const now = new Date().toISOString();
+  const jstFormat = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
   for (const team of teams) {
     const { data: nextSched } = await supabase
       .from("schedules")
@@ -62,8 +73,14 @@ export default async function TeamsPage() {
       .single();
     if (nextSched) {
       const d = new Date(nextSched.date);
-      const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-      team.nextSchedule = `${d.getMonth() + 1}/${d.getDate()}（${weekdays[d.getDay()]}）${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      const parts = jstFormat.formatToParts(d);
+      const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+      const month = get("month");
+      const day = get("day");
+      const weekday = get("weekday");
+      const hour = get("hour");
+      const minute = get("minute");
+      team.nextSchedule = `${month}/${day}（${weekday}）${hour}:${minute}`;
     }
   }
 
