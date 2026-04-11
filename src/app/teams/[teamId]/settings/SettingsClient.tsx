@@ -713,25 +713,23 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
             <LocationAdder onAdd={addLocationPreset} />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2 min-w-0">
-              <Label htmlFor="default-start">デフォルト開始時刻</Label>
+          <div className="space-y-2">
+            <Label htmlFor="default-start">デフォルト時間</Label>
+            <div className="flex items-center gap-2">
               <Input
                 id="default-start"
                 type="time"
                 value={settings.defaultStartTime}
                 onChange={(e) => update("defaultStartTime", e.target.value)}
-                className="w-full"
+                className="w-[110px]"
               />
-            </div>
-            <div className="space-y-2 min-w-0">
-              <Label htmlFor="default-end">デフォルト終了時刻</Label>
+              <span className="text-sm text-gray-400">〜</span>
               <Input
                 id="default-end"
                 type="time"
                 value={settings.defaultEndTime}
                 onChange={(e) => update("defaultEndTime", e.target.value)}
-                className="w-full"
+                className="w-[110px]"
               />
             </div>
           </div>

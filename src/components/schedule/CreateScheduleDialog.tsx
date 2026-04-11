@@ -108,28 +108,27 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
               value={dateVal}
               onChange={(e) => setDateVal(e.target.value)}
               required
+              className="w-[160px]"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="min-w-0">
-              <Label htmlFor="start-time">開始時刻</Label>
+          <div>
+            <Label htmlFor="start-time">時間（終了は任意）</Label>
+            <div className="flex items-center gap-2">
               <Input
                 id="start-time"
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 required
-                className="w-full"
+                className="w-[110px]"
               />
-            </div>
-            <div className="min-w-0">
-              <Label htmlFor="end-time">終了時刻（任意）</Label>
+              <span className="text-sm text-gray-400">〜</span>
               <Input
                 id="end-time"
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full"
+                className="w-[110px]"
               />
             </div>
           </div>
