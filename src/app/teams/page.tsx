@@ -1,11 +1,10 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { TeamsClient } from "./TeamsClient";
 
 export default async function TeamsPage() {
+  const user = await requireUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   // ユーザー情報
   const { data: profile } = await supabase

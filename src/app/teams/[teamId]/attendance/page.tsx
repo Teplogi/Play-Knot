@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { AttendanceStatsClient } from "./AttendanceStatsClient";
 import { calcMemberStats } from "@/lib/attendance/stats";
 
@@ -9,26 +9,25 @@ export default async function AttendancePage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+  await requireUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  // メンバー一覧
-  const { data: members } = await supabase
-    .from("team_members")
-    .select("user_id, users(name)")
-    .eq("team_id", teamId);
+  // メンバー / スケジュール+出欠 を並列取得
+  const [membersRes, schedulesRes] = await Promise.all([
+    supabase.from("team_members").select("user_id, users(name)").eq("team_id", teamId),
+    supabase
+      .from("schedules")
+      .select("id, date, attendances(user_id, status, created_at, updated_at)")
+      .eq("team_id", teamId),
+  ]);
+
+  const members = membersRes.data;
+  const schedules = schedulesRes.data;
 
   const memberInputs = (members ?? []).map((m) => ({
     user_id: m.user_id,
     name: (m.users as unknown as { name: string })?.name ?? "不明",
   }));
-
-  // このチームの全出欠（スケジュール日付つき）
-  const { data: schedules } = await supabase
-    .from("schedules")
-    .select("id, date, attendances(user_id, status, created_at, updated_at)")
-    .eq("team_id", teamId);
 
   const attendanceInputs = (schedules ?? []).flatMap((s) =>
     (s.attendances ?? []).map((a: { user_id: string; status: "attend" | "absent"; created_at: string; updated_at: string }) => ({

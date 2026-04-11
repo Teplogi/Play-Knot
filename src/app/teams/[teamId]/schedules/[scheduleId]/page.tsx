@@ -1,5 +1,6 @@
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser, getTeamMembership } from "@/lib/auth";
 import { ScheduleDetailClient } from "./ScheduleDetailClient";
 import { hasHostPrivilege } from "@/types";
 
@@ -9,34 +10,28 @@ export default async function ScheduleDetailPage({
   params: Promise<{ teamId: string; scheduleId: string }>;
 }) {
   const { teamId, scheduleId } = await params;
+  const user = await requireUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  // ロール
-  const { data: membership } = await supabase
-    .from("team_members")
-    .select("role")
-    .eq("team_id", teamId)
-    .eq("user_id", user.id)
-    .single();
+  // ロール / 日程詳細 / メンバー数 を並列取得
+  const [membership, scheduleRes, totalMembersRes] = await Promise.all([
+    getTeamMembership(teamId),
+    supabase
+      .from("schedules")
+      .select("*, attendances(id, schedule_id, user_id, status, comment, updated_at, created_at, users(id, name, email, gender, birth_year, position, created_at))")
+      .eq("id", scheduleId)
+      .single(),
+    supabase
+      .from("team_members")
+      .select("id", { count: "exact", head: true })
+      .eq("team_id", teamId),
+  ]);
 
-  const canManageSchedule = hasHostPrivilege(membership?.role ?? "guest");
-
-  // 日程（出欠 + ユーザー情報つき）
-  const { data: schedule } = await supabase
-    .from("schedules")
-    .select("*, attendances(id, schedule_id, user_id, status, comment, updated_at, created_at, users(id, name, email, gender, birth_year, position, created_at))")
-    .eq("id", scheduleId)
-    .single();
-
+  const schedule = scheduleRes.data;
   if (!schedule) notFound();
 
-  // メンバー数
-  const { count: totalMembers } = await supabase
-    .from("team_members")
-    .select("id", { count: "exact", head: true })
-    .eq("team_id", teamId);
+  const canManageSchedule = hasHostPrivilege(membership?.role ?? "guest");
+  const totalMembers = totalMembersRes.count;
 
   // 自分の出欠
   const myAttendance = schedule.attendances?.find(

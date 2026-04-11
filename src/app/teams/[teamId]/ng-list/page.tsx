@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { NgListClient } from "./NgListClient";
 
 export default async function NgListPage({
@@ -8,18 +8,20 @@ export default async function NgListPage({
   params: Promise<{ teamId: string }>;
 }) {
   const { teamId } = await params;
+  await requireUser();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
-  // NGペア一覧（ユーザー名つき）
-  const { data: rawPairs } = await supabase
-    .from("ng_pairs")
-    .select("id, team_id, created_at, user_a:users!ng_pairs_user_id_a_fkey(id, name), user_b:users!ng_pairs_user_id_b_fkey(id, name)")
-    .eq("team_id", teamId)
-    .order("created_at", { ascending: false });
+  // NGペア / メンバー を並列取得
+  const [rawPairsRes, rawMembersRes] = await Promise.all([
+    supabase
+      .from("ng_pairs")
+      .select("id, team_id, created_at, user_a:users!ng_pairs_user_id_a_fkey(id, name), user_b:users!ng_pairs_user_id_b_fkey(id, name)")
+      .eq("team_id", teamId)
+      .order("created_at", { ascending: false }),
+    supabase.from("team_members").select("users(id, name)").eq("team_id", teamId),
+  ]);
 
-  const pairs = (rawPairs ?? []).map((p) => ({
+  const pairs = (rawPairsRes.data ?? []).map((p) => ({
     id: p.id,
     team_id: p.team_id,
     created_at: p.created_at,
@@ -27,13 +29,7 @@ export default async function NgListPage({
     user_b: p.user_b as unknown as { id: string; name: string },
   }));
 
-  // メンバー一覧（ドロップダウン用）
-  const { data: rawMembers } = await supabase
-    .from("team_members")
-    .select("users(id, name)")
-    .eq("team_id", teamId);
-
-  const members = (rawMembers ?? []).map((m) => {
+  const members = (rawMembersRes.data ?? []).map((m) => {
     const u = m.users as unknown as { id: string; name: string };
     return { id: u.id, name: u.name };
   });
