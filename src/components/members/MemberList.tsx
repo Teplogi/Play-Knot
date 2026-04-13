@@ -42,7 +42,10 @@ export function MemberList({ members, teamId, onUpdated }: MemberListProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {members.map((member) => {
-        const genderBg = member.gender === "男" ? "bg-blue-100 text-blue-700" : member.gender === "女" ? "bg-pink-100 text-pink-700" : "bg-gray-100 text-gray-500";
+        // アカウント設定 (users.gender) を優先、未設定なら team_members.gender にフォールバック
+        const effectiveGender =
+          member.users.gender && member.users.gender !== "未設定" ? member.users.gender : member.gender;
+        const genderBg = effectiveGender === "男" ? "bg-blue-100 text-blue-700" : effectiveGender === "女" ? "bg-pink-100 text-pink-700" : "bg-gray-100 text-gray-500";
         return (
           <div key={member.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow">
             <div className="flex items-start gap-3">
@@ -54,9 +57,9 @@ export function MemberList({ members, teamId, onUpdated }: MemberListProps) {
                 <p className="font-semibold text-gray-900 truncate">{member.users.name}</p>
                 <p className="text-xs text-gray-400 truncate">{member.users.email}</p>
                 <div className="flex items-center gap-1.5 mt-2">
-                  {member.gender !== "未設定" && (
-                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${member.gender === "男" ? "bg-blue-50 text-blue-600 border-blue-200" : "bg-pink-50 text-pink-600 border-pink-200"}`}>
-                      {member.gender}
+                  {effectiveGender !== "未設定" && (
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${effectiveGender === "男" ? "bg-blue-50 text-blue-600 border-blue-200" : "bg-pink-50 text-pink-600 border-pink-200"}`}>
+                      {effectiveGender}
                     </Badge>
                   )}
                   <Badge

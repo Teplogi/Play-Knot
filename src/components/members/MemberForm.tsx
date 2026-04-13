@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import type { TeamMemberWithUser, TeamRole } from "@/types";
+import { ROLE_LABELS, type TeamMemberWithUser, type TeamRole } from "@/types";
 
 type MemberFormProps = {
   teamId: string;
@@ -31,7 +31,6 @@ type MemberFormProps = {
 export function MemberForm({ teamId, member, coHostCount, onUpdated, trigger }: MemberFormProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [gender, setGender] = useState(member?.gender || "未設定");
   const [role, setRole] = useState<TeamRole>(member?.role || "guest");
 
   // co_host 上限チェック: 現在のメンバーが既に co_host なら自身は除外
@@ -49,7 +48,7 @@ export function MemberForm({ teamId, member, coHostCount, onUpdated, trigger }: 
         const res = await fetch(`/api/members/${member.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teamId, role, gender }),
+          body: JSON.stringify({ teamId, role }),
         });
 
         if (!res.ok) {
@@ -88,24 +87,10 @@ export function MemberForm({ teamId, member, coHostCount, onUpdated, trigger }: 
           )}
 
           <div>
-            <Label className="text-sm font-medium mb-2 block">性別</Label>
-            <Select value={gender} onValueChange={(v) => v && setGender(v as typeof gender)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="男">男</SelectItem>
-                <SelectItem value="女">女</SelectItem>
-                <SelectItem value="未設定">未設定</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
             <Label className="text-sm font-medium mb-2 block">役割</Label>
             <Select value={role} onValueChange={(v) => v && setRole(v as TeamRole)}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>{(v) => ROLE_LABELS[v as TeamRole] ?? ""}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="host">ホスト</SelectItem>

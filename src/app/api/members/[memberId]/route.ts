@@ -12,7 +12,7 @@ export async function PUT(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
 
-    const { teamId, role, gender } = await request.json();
+    const { teamId, role } = await request.json();
     if (!teamId) return NextResponse.json({ error: "チームIDが必要です" }, { status: 400 });
 
     // ホスト権限チェック
@@ -68,13 +68,13 @@ export async function PUT(
       }
     }
 
-    const updateData: Record<string, string> = {};
-    if (role) updateData.role = role;
-    if (gender) updateData.gender = gender;
+    if (!role) {
+      return NextResponse.json({ error: "更新内容がありません" }, { status: 400 });
+    }
 
     const { data: member, error } = await supabase
       .from("team_members")
-      .update(updateData)
+      .update({ role })
       .eq("id", memberId)
       .select("*, users(id, name, email)")
       .single();

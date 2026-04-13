@@ -84,7 +84,9 @@ export function NgPairForm({ teamId, members, onAdded }: NgPairFormProps) {
             <Label className="text-sm font-medium mb-2 block">メンバー1</Label>
             <Select value={userIdA} onValueChange={(v) => v && setUserIdA(v)}>
               <SelectTrigger>
-                <SelectValue placeholder="選択してください" />
+                <SelectValue placeholder="選択してください">
+                  {(v) => members.find((m) => m.id === v)?.name ?? ""}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {members.map((m) => (
@@ -102,7 +104,9 @@ export function NgPairForm({ teamId, members, onAdded }: NgPairFormProps) {
             <Label className="text-sm font-medium mb-2 block">メンバー2</Label>
             <Select value={userIdB} onValueChange={(v) => v && setUserIdB(v)}>
               <SelectTrigger>
-                <SelectValue placeholder="選択してください" />
+                <SelectValue placeholder="選択してください">
+                  {(v) => members.find((m) => m.id === v)?.name ?? ""}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {members
