@@ -24,10 +24,11 @@ type NgPairListProps = {
 export function NgPairList({ pairs, teamId, onDeleted }: NgPairListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const handleDelete = async (pairId: string) => {
-    setDeletingId(pairId);
+  const handleDelete = async (pair: NgPairWithUsers) => {
+    if (!confirm(`${pair.user_a.name} × ${pair.user_b.name} のNGペアを削除しますか？`)) return;
+    setDeletingId(pair.id);
     try {
-      const res = await fetch(`/api/ng-pairs/${pairId}`, {
+      const res = await fetch(`/api/ng-pairs/${pair.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teamId }),
@@ -75,7 +76,7 @@ export function NgPairList({ pairs, teamId, onDeleted }: NgPairListProps) {
               variant="ghost"
               size="sm"
               className="text-destructive hover:text-destructive"
-              onClick={() => handleDelete(pair.id)}
+              onClick={() => handleDelete(pair)}
               disabled={deletingId === pair.id}
             >
               削除
