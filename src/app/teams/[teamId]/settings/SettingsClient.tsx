@@ -263,10 +263,13 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error("saveScheduleDefaults error:", res.status, err);
-        throw new Error();
+        const msg = err?.detail || err?.error || `保存に失敗しました (HTTP ${res.status})`;
+        toast.error(`日程のデフォルト設定: ${msg}`);
+        return;
       }
       toast.success("日程のデフォルト設定を保存しました");
-    } catch {
+    } catch (e) {
+      console.error("saveScheduleDefaults exception:", e);
       toast.error("日程のデフォルト設定の保存に失敗しました");
     } finally {
       setSchedSaving(false);
@@ -399,9 +402,136 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
 
   const guestMembers = members.filter((m) => m.role === "guest");
 
+  // ---- 一括保存（変更のあった全セクションをまとめて保存） ----
+  const [saveAllRunning, setSaveAllRunning] = useState(false);
+
+  const saveAll = async () => {
+    setSaveAllRunning(true);
+    const failed: string[] = [];
+    const run = async (label: string, req: Promise<Response>) => {
+      try {
+        const res = await req;
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          console.error(`saveAll ${label} error:`, res.status, err);
+          const detail = err?.detail || err?.error || `HTTP ${res.status}`;
+          failed.push(`${label}: ${detail}`);
+        }
+      } catch (e) {
+        console.error(`saveAll ${label} exception:`, e);
+        failed.push(`${label}: ネットワークエラー`);
+      }
+    };
+
+    const jobs: Promise<void>[] = [];
+
+    // アカウント（個人）
+    jobs.push(
+      run(
+        "アカウント",
+        fetch("/api/account", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: account.displayName,
+            gender: account.gender,
+            birth_year: account.birthYear,
+            position: account.position,
+          }),
+        }),
+      ),
+    );
+    try { localStorage.setItem("playknot-schedule-view", account.scheduleView); } catch { /* noop */ }
+
+    // 通知設定（個人）
+    jobs.push(
+      run(
+        "通知設定",
+        fetch("/api/notification-preferences", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teamId, ...notifPrefs }),
+        }),
+      ),
+    );
+
+    // ホスト系
+    if (isHostOrCoHost) {
+      jobs.push(
+        run(
+          "基本情報",
+          fetch("/api/teams/settings", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              teamId,
+              name: settings.name,
+              sportType: settings.sportType,
+              description: settings.description,
+              iconColor: settings.iconColor,
+            }),
+          }),
+        ),
+      );
+      jobs.push(
+        run(
+          "日程デフォルト",
+          fetch("/api/teams/settings", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              teamId,
+              default_locations: settings.defaultLocations,
+              default_start_time: settings.defaultStartTime,
+              default_end_time: settings.defaultEndTime,
+              attendance_deadline_hours_before: settings.attendanceDeadlineHoursBefore,
+              allow_tentative: settings.allowTentative,
+            }),
+          }),
+        ),
+      );
+      jobs.push(
+        run(
+          "チーム分けデフォルト",
+          fetch("/api/teams/settings", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              teamId,
+              default_divide_by: settings.defaultDivideBy,
+              default_divide_value: settings.defaultDivideValue,
+              default_divide_method: settings.defaultDivideMethod,
+              auto_select_attendees: settings.autoSelectAttendees,
+            }),
+          }),
+        ),
+      );
+    }
+
+    await Promise.all(jobs);
+    setSaveAllRunning(false);
+
+    if (failed.length === 0) {
+      toast.success("すべての変更を保存しました");
+      router.refresh();
+    } else {
+      toast.error(`一部の保存に失敗しました: ${failed.join(" / ")}`);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-900">設定</h2>
+      {/* ページ上部: タイトル + 一括保存 */}
+      <div className="sticky top-0 z-10 -mx-4 px-4 sm:mx-0 sm:px-0 bg-gray-50/90 backdrop-blur-sm pt-2 pb-3 flex items-center justify-between gap-3">
+        <h2 className="text-xl font-bold text-gray-900">設定</h2>
+        <Button
+          onClick={saveAll}
+          disabled={saveAllRunning}
+          className="rounded-lg bg-indigo-600 hover:bg-indigo-700 shadow-sm"
+        >
+          {saveAllRunning ? "保存中..." : "一括保存"}
+        </Button>
+      </div>
 
       {/* 0. アカウント設定（全ロール共通・個人） */}
       <Section title="アカウント設定" description="あなたのプロフィール情報を設定します">

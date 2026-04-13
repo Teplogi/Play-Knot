@@ -36,3 +36,7 @@ END $$;
 ALTER TABLE public.attendances
   ADD CONSTRAINT attendances_status_check
   CHECK (status IN ('attend', 'absent', 'tentative'));
+
+-- PostgREST のスキーマキャッシュを即時リロード（新カラムが 400 Bad Request を
+-- 引き起こさないようにするため）。Supabase でもこの NOTIFY は有効。
+NOTIFY pgrst, 'reload schema';
