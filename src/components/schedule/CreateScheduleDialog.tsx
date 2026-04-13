@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,28 @@ type CreateScheduleDialogProps = {
   };
 };
 
+// 日付と開始時刻から「X 時間前」の JST datetime-local 文字列を組み立てる
+function computeDeadline(
+  dateVal: string,
+  startTime: string,
+  hoursBefore: number
+): string {
+  const start = new Date(`${dateVal}T${startTime}:00+09:00`);
+  if (isNaN(start.getTime())) return "";
+  const deadlineDate = new Date(start.getTime() - hoursBefore * 3600_000);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(deadlineDate);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
 export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -35,6 +57,19 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
   const [note, setNote] = useState("");
   const [capacity, setCapacity] = useState<string>("");
   const [deadline, setDeadline] = useState("");
+  // ユーザが締切を手動編集したら以後は自動同期を止める
+  const [deadlineTouched, setDeadlineTouched] = useState(false);
+
+  // 日付・開始時刻・デフォルト締切時間から自動計算
+  useEffect(() => {
+    if (deadlineTouched) return;
+    const h = defaults?.deadlineHoursBefore;
+    if (h == null || !dateVal || !startTime) {
+      setDeadline("");
+      return;
+    }
+    setDeadline(computeDeadline(dateVal, startTime, h));
+  }, [dateVal, startTime, defaults?.deadlineHoursBefore, deadlineTouched]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +117,7 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
       setNote("");
       setCapacity("");
       setDeadline("");
+      setDeadlineTouched(false);
       router.refresh();
     } catch {
       toast.error("エラーが発生しました");
@@ -179,7 +215,10 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
                 id="deadline"
                 type="datetime-local"
                 value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
+                onChange={(e) => {
+                  setDeadline(e.target.value);
+                  setDeadlineTouched(true);
+                }}
                 className="w-full"
               />
             </div>
