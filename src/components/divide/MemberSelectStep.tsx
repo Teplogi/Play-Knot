@@ -13,8 +13,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Member } from "@/lib/divide/algorithm";
 
+type FutureSchedule = {
+  id: string;
+  date: string;
+  location: string | null;
+  attendingIds: string[];
+};
+
 type MemberSelectStepProps = {
   registeredMembers: Member[];
+  futureSchedules: FutureSchedule[];
   initialSelectedIds?: Set<string> | null;
   initialDummies?: Member[];
   onChange: (selectedMembers: Member[], selectedIds: Set<string>, dummies: Member[]) => void;
@@ -50,7 +58,27 @@ function genderLabel(gender: string) {
   return { text: "—", cls: "text-gray-400" };
 }
 
-export function MemberSelectStep({ registeredMembers, initialSelectedIds, initialDummies, onChange }: MemberSelectStepProps) {
+const scheduleFormat = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  month: "numeric",
+  day: "numeric",
+  weekday: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+function formatScheduleDate(iso: string): string {
+  return scheduleFormat.format(new Date(iso));
+}
+
+export function MemberSelectStep({
+  registeredMembers,
+  futureSchedules,
+  initialSelectedIds,
+  initialDummies,
+  onChange,
+}: MemberSelectStepProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     initialSelectedIds ?? new Set(registeredMembers.map((m) => m.id))
   );
@@ -58,6 +86,7 @@ export function MemberSelectStep({ registeredMembers, initialSelectedIds, initia
   const [editingDummyId, setEditingDummyId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const [draftGender, setDraftGender] = useState<Gender>("未設定");
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
 
   const allMembers = [...registeredMembers, ...dummies];
   const selectedMembers = allMembers.filter((m) => selectedIds.has(m.id));
@@ -104,16 +133,38 @@ export function MemberSelectStep({ registeredMembers, initialSelectedIds, initia
     setEditingDummyId(null);
   };
 
+  // 選択した日程の参加者で登録メンバーの選択状態を上書きする。
+  // 助っ人は現在の選択状態を維持。
+  const applySchedule = (schedule: FutureSchedule) => {
+    const registeredIds = new Set(registeredMembers.map((m) => m.id));
+    const attendingRegistered = schedule.attendingIds.filter((id) => registeredIds.has(id));
+    const keptDummyIds = dummies.map((d) => d.id).filter((id) => selectedIds.has(id));
+    setSelectedIds(new Set([...attendingRegistered, ...keptDummyIds]));
+    setScheduleDialogOpen(false);
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h3 className="font-semibold text-gray-900">メンバー選択</h3>
           <p className="text-sm text-gray-500">{selectedMembers.length}人選択中</p>
         </div>
-        <Button variant="outline" size="sm" onClick={addDummy} className="rounded-lg" aria-label="ダミーメンバーを追加">
-          + 助っ人追加
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setScheduleDialogOpen(true)}
+            disabled={futureSchedules.length === 0}
+            className="rounded-lg"
+            aria-label="日程の参加者を反映"
+          >
+            参加者を反映
+          </Button>
+          <Button variant="outline" size="sm" onClick={addDummy} className="rounded-lg" aria-label="ダミーメンバーを追加">
+            + 助っ人追加
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-6 gap-1.5">
@@ -165,6 +216,51 @@ export function MemberSelectStep({ registeredMembers, initialSelectedIds, initia
           );
         })}
       </div>
+
+      {/* 日程選択ダイアログ（参加者を反映） */}
+      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>日程を選択</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2 max-h-[60vh] overflow-y-auto">
+            {futureSchedules.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">今後の日程はありません</p>
+            ) : (
+              futureSchedules.map((s) => {
+                const attendingCount = s.attendingIds.filter((id) =>
+                  registeredMembers.some((m) => m.id === id)
+                ).length;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => applySchedule(s)}
+                    className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-gray-900">{formatScheduleDate(s.date)}</p>
+                        {s.location && (
+                          <p className="text-xs text-gray-500 truncate">{s.location}</p>
+                        )}
+                      </div>
+                      <span className="text-xs font-medium text-indigo-600 whitespace-nowrap">
+                        参加 {attendingCount}人
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleDialogOpen(false)} className="rounded-lg">
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 助っ人編集ダイアログ */}
       <Dialog open={editingDummyId !== null} onOpenChange={(open) => !open && setEditingDummyId(null)}>

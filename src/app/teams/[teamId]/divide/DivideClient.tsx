@@ -8,9 +8,16 @@ import { divideTeams, calcTeamCount, type Member } from "@/lib/divide/algorithm"
 import { Button } from "@/components/ui/button";
 import type { NgPair } from "@/types";
 
+export type FutureSchedule = {
+  id: string;
+  date: string;
+  location: string | null;
+  attendingIds: string[];
+};
+
 type DivideClientProps = {
   registeredMembers: Member[];
-  attendingIds: string[];
+  futureSchedules: FutureSchedule[];
   ngPairs: NgPair[];
   isHost: boolean;
 };
@@ -21,14 +28,9 @@ type Committed = {
   version: number; // 再抽選で bump
 };
 
-export function DivideClient({ registeredMembers, attendingIds, ngPairs }: DivideClientProps) {
-  const initialMembers = useMemo(
-    () => (attendingIds.length > 0 ? registeredMembers.filter((m) => attendingIds.includes(m.id)) : registeredMembers),
-    [attendingIds, registeredMembers]
-  );
-
+export function DivideClient({ registeredMembers, futureSchedules, ngPairs }: DivideClientProps) {
   // 編集中（まだ実行していない）状態
-  const [selectedMembers, setSelectedMembers] = useState<Member[]>(initialMembers);
+  const [selectedMembers, setSelectedMembers] = useState<Member[]>(registeredMembers);
   const [savedSelectedIds, setSavedSelectedIds] = useState<Set<string> | null>(null);
   const [savedDummies, setSavedDummies] = useState<Member[]>([]);
   const [settings, setSettings] = useState<DivideSettings | null>(null);
@@ -69,7 +71,8 @@ export function DivideClient({ registeredMembers, attendingIds, ngPairs }: Divid
       {/* メンバー選択 */}
       <section>
         <MemberSelectStep
-          registeredMembers={initialMembers}
+          registeredMembers={registeredMembers}
+          futureSchedules={futureSchedules}
           initialSelectedIds={savedSelectedIds}
           initialDummies={savedDummies}
           onChange={(members, selectedIds, dummies) => {
