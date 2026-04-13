@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -15,137 +14,31 @@ export async function GET(request: Request) {
       // ログイン成功後、まず public.users 行の存在を保証する
       // (DB トリガーが失敗しても招待や日程作成等で FK エラーにならないように)
       try {
-        await ensurePublicUser(supabase);
+        const { error: ensureErr } = await supabase.rpc("ensure_public_user");
+        if (ensureErr) console.error("ensure_public_user failed:", ensureErr);
       } catch (e) {
-        console.error("ensurePublicUser failed:", e);
+        console.error("ensure_public_user threw:", e);
       }
 
       // 招待トークンがある場合、チームに自動参加
       let joinedTeamId: string | null = null;
       if (token) {
         try {
-          joinedTeamId = await processInviteToken(supabase, token);
+          const { data, error: acceptErr } = await supabase.rpc("accept_invite", { p_token: token });
+          if (acceptErr) {
+            console.error("accept_invite failed:", acceptErr);
+          } else {
+            joinedTeamId = data as string;
+          }
         } catch (e) {
-          console.error("招待トークン処理エラー:", e);
+          console.error("accept_invite threw:", e);
         }
       }
 
-      // 参加したチームがあればそこへ、なければチーム選択画面へ
       const dest = joinedTeamId ? `/teams/${joinedTeamId}` : "/teams";
       return NextResponse.redirect(`${origin}${dest}`);
     }
   }
 
-  // エラー時はログイン画面へ
   return NextResponse.redirect(`${origin}/login`);
-}
-
-// auth.users 経由で作られた現ユーザに対応する public.users 行が
-// 確実に存在するようにする（DB トリガーが失敗していた場合の安全網）
-async function ensurePublicUser(
-  supabase: Awaited<ReturnType<typeof createClient>>
-) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const admin = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  const fallbackName =
-    (user.user_metadata?.full_name as string | undefined) ??
-    (user.user_metadata?.name as string | undefined) ??
-    (user.email ? user.email.split("@")[0] : "ユーザー");
-
-  await admin
-    .from("users")
-    .upsert(
-      {
-        id: user.id,
-        name: fallbackName,
-        email: user.email ?? "",
-      },
-      { onConflict: "id", ignoreDuplicates: true }
-    );
-}
-
-// 招待トークンを処理してチームに参加させる
-// team_members の INSERT は RLS が「host のみ」を要求するため
-// service_role を使ってバイパスする必要がある
-async function processInviteToken(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  token: string
-): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const admin = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // 注: public.users 行の存在保証は呼び出し元の ensurePublicUser で済ませてある
-
-  // トークン検索（used_at で絞らない: 過去に「used_at だけ更新されたが
-  // team_members insert は失敗」という stuck 状態からの復旧を可能にする）
-  const { data: inviteToken, error: tokenErr } = await admin
-    .from("invite_tokens")
-    .select("*")
-    .eq("token", token)
-    .maybeSingle();
-
-  if (tokenErr || !inviteToken) {
-    console.error("invite token lookup failed:", tokenErr);
-    return null;
-  }
-
-  // 期限切れチェック
-  if (new Date(inviteToken.expires_at) < new Date()) {
-    console.error("invite token expired");
-    return null;
-  }
-
-  // 既にメンバーならそのチーム ID を返す（冪等）
-  const { data: existing } = await admin
-    .from("team_members")
-    .select("id")
-    .eq("team_id", inviteToken.team_id)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (existing) {
-    return inviteToken.team_id as string;
-  }
-
-  // 別人が既に使用済みなら拒否（セキュリティ維持）
-  // 自分が used_by なら復旧扱いで進める
-  if (inviteToken.used_at && inviteToken.used_by && inviteToken.used_by !== user.id) {
-    console.error("invite token already used by another user");
-    return null;
-  }
-
-  // guest としてチームに参加（service_role で RLS バイパス）
-  const { error: insertErr } = await admin.from("team_members").insert({
-    team_id: inviteToken.team_id,
-    user_id: user.id,
-    role: "guest",
-  });
-
-  if (insertErr) {
-    console.error("team_members insert failed:", insertErr);
-    return null;
-  }
-
-  // トークンを使用済みにマーク
-  const { error: updateErr } = await admin
-    .from("invite_tokens")
-    .update({ used_at: new Date().toISOString(), used_by: user.id })
-    .eq("id", inviteToken.id);
-
-  if (updateErr) {
-    console.error("invite_tokens update failed:", updateErr);
-  }
-
-  return inviteToken.team_id as string;
 }

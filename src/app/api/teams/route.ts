@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 // チーム作成
 export async function POST(request: Request) {
@@ -17,56 +16,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "チーム名は必須です" }, { status: 400 });
     }
 
-    // RLSをバイパスするためservice_roleクライアントを使用
-    // （チーム作成時はまだメンバーが存在しないためRLSポリシーを通過できない）
-    const admin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    // チーム新規作成権限チェック
-    // service_role を使うため RLS は効かない。サーバ側で明示的にチェック。
-    const { data: profile } = await admin
-      .from("users")
-      .select("can_create_team")
-      .eq("id", user.id)
+    const { data: team, error } = await supabase
+      .rpc("create_team", { p_name: name, p_sport_type: sportType ?? "" })
       .single();
 
-    if (!profile?.can_create_team) {
-      return NextResponse.json(
-        { error: "チームの新規作成権限がありません" },
-        { status: 403 }
-      );
-    }
-
-    // チーム作成
-    const { data: team, error: teamError } = await admin
-      .from("teams")
-      .insert({
-        name: name.trim(),
-        sport_type: sportType?.trim() || "",
-        icon_color: "indigo",
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (teamError) {
-      return NextResponse.json({ error: "チームの作成に失敗しました" }, { status: 500 });
-    }
-
-    // 作成者をホストとして追加
-    const { error: memberError } = await admin
-      .from("team_members")
-      .insert({
-        team_id: team.id,
-        user_id: user.id,
-        role: "host",
-      });
-
-    if (memberError) {
-      await admin.from("teams").delete().eq("id", team.id);
-      return NextResponse.json({ error: "チームの作成に失敗しました" }, { status: 500 });
+    if (error) {
+      // 42501 = insufficient_privilege（権限なし or 認証なし）
+      const status = error.code === "42501" ? 403 : 500;
+      const message =
+        error.code === "42501"
+          ? "チームの新規作成権限がありません"
+          : "チームの作成に失敗しました";
+      return NextResponse.json({ error: message, detail: error.message }, { status });
     }
 
     return NextResponse.json(team);

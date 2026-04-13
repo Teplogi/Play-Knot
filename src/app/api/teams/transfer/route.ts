@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 // オーナー譲渡
 export async function POST(request: Request) {
@@ -13,36 +12,18 @@ export async function POST(request: Request) {
 
     const { teamId, newOwnerId } = await request.json();
 
-    // 現在のユーザーがホストか確認
-    const { data: member } = await supabase
-      .from("team_members")
-      .select("role")
-      .eq("team_id", teamId)
-      .eq("user_id", user.id)
-      .single();
+    const { error } = await supabase.rpc("transfer_team_ownership", {
+      p_team_id: teamId,
+      p_new_owner_id: newOwnerId,
+    });
 
-    if (!member || member.role !== "host") {
-      return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
+    if (error) {
+      const status = error.code === "42501" ? 403 : 500;
+      return NextResponse.json(
+        { error: error.code === "42501" ? "ホスト権限が必要です" : "譲渡に失敗しました", detail: error.message },
+        { status }
+      );
     }
-
-    const admin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    // 新オーナーをhostに
-    await admin
-      .from("team_members")
-      .update({ role: "host" })
-      .eq("team_id", teamId)
-      .eq("user_id", newOwnerId);
-
-    // 旧オーナーをguestに
-    await admin
-      .from("team_members")
-      .update({ role: "guest" })
-      .eq("team_id", teamId)
-      .eq("user_id", user.id);
 
     return NextResponse.json({ success: true });
   } catch {

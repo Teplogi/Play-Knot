@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
 
-// 日程作成（ホストのみ）
+// 日程作成（ホストのみ。RLS ポリシーで is_team_host チェック）
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -13,33 +12,7 @@ export async function POST(request: Request) {
 
     const { teamId, date, endDate, location, note, capacity, deadline } = await request.json();
 
-    // ホスト権限チェック（RLS再帰回避のため service_role を使用）
-    const admin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const { data: member, error: memberError } = await admin
-      .from("team_members")
-      .select("role")
-      .eq("team_id", teamId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (memberError || !member) {
-      console.error("schedules POST member check error:", memberError);
-      return NextResponse.json(
-        { error: "メンバー情報の取得に失敗しました", detail: memberError?.message },
-        { status: 403 }
-      );
-    }
-
-    if (member.role !== "host" && member.role !== "co_host") {
-      return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
-    }
-
-    // RLSバイパスでinsert
-    const { data: schedule, error } = await admin
+    const { data: schedule, error } = await supabase
       .from("schedules")
       .insert({
         team_id: teamId,
@@ -56,9 +29,10 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error("schedules POST insert error:", error);
+      const status = error.code === "42501" ? 403 : 500;
       return NextResponse.json(
-        { error: "日程の作成に失敗しました", detail: error.message },
-        { status: 500 }
+        { error: error.code === "42501" ? "ホスト権限が必要です" : "日程の作成に失敗しました", detail: error.message },
+        { status }
       );
     }
 
@@ -78,45 +52,28 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const { scheduleId, teamId, date, endDate, location, note, capacity, deadline } = await request.json();
+    const { scheduleId, date, endDate, location, note, capacity, deadline } = await request.json();
 
-    // ホスト権限チェック（RLS再帰回避のため service_role を使用）
-    const admin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const { data: member, error: memberError } = await admin
-      .from("team_members")
-      .select("role")
-      .eq("team_id", teamId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (memberError || !member) {
-      console.error("schedules PUT member check error:", memberError);
-      return NextResponse.json(
-        { error: "メンバー情報の取得に失敗しました", detail: memberError?.message },
-        { status: 403 }
-      );
-    }
-
-    if (member.role !== "host" && member.role !== "co_host") {
-      return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
-    }
-
-    const { data: schedule, error } = await admin
+    const { data: schedule, error } = await supabase
       .from("schedules")
-      .update({ date, end_date: endDate || null, location, note: note || null, capacity: capacity ?? null, deadline: deadline || null })
+      .update({
+        date,
+        end_date: endDate || null,
+        location,
+        note: note || null,
+        capacity: capacity ?? null,
+        deadline: deadline || null,
+      })
       .eq("id", scheduleId)
       .select()
       .single();
 
     if (error) {
       console.error("schedules PUT update error:", error);
+      const status = error.code === "42501" ? 403 : 500;
       return NextResponse.json(
-        { error: "日程の更新に失敗しました", detail: error.message },
-        { status: 500 }
+        { error: error.code === "42501" ? "ホスト権限が必要です" : "日程の更新に失敗しました", detail: error.message },
+        { status }
       );
     }
 
@@ -136,43 +93,19 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const { scheduleId, teamId } = await request.json();
+    const { scheduleId } = await request.json();
 
-    // ホスト権限チェック（RLS再帰回避のため service_role を使用）
-    const admin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const { data: member, error: memberError } = await admin
-      .from("team_members")
-      .select("role")
-      .eq("team_id", teamId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (memberError || !member) {
-      console.error("schedules DELETE member check error:", memberError);
-      return NextResponse.json(
-        { error: "メンバー情報の取得に失敗しました", detail: memberError?.message },
-        { status: 403 }
-      );
-    }
-
-    if (member.role !== "host" && member.role !== "co_host") {
-      return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
-    }
-
-    const { error } = await admin
+    const { error } = await supabase
       .from("schedules")
       .delete()
       .eq("id", scheduleId);
 
     if (error) {
       console.error("schedules DELETE delete error:", error);
+      const status = error.code === "42501" ? 403 : 500;
       return NextResponse.json(
-        { error: "日程の削除に失敗しました", detail: error.message },
-        { status: 500 }
+        { error: error.code === "42501" ? "ホスト権限が必要です" : "日程の削除に失敗しました", detail: error.message },
+        { status }
       );
     }
 
