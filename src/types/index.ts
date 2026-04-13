@@ -59,12 +59,19 @@ export type Schedule = {
   created_at: string;
 };
 
+// 出欠ステータス
+//   - attend: 参加確定
+//   - absent: 不参加
+//   - tentative: 検討中（allow_tentative ON のチームでのみ新規選択可能。
+//                キャパ・チーム分け・統計の母数には含めない）
+export type AttendanceStatus = "attend" | "absent" | "tentative";
+
 // 出欠（public.attendancesテーブルに対応）
 export type Attendance = {
   id: string;
   schedule_id: string;
   user_id: string;
-  status: "attend" | "absent";
+  status: AttendanceStatus;
   comment: string | null;
   updated_at: string;
   created_at: string;

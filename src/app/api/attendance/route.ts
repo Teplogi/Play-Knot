@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "必須パラメータが不足しています" }, { status: 400 });
     }
 
-    if (!["attend", "absent"].includes(status)) {
+    if (!["attend", "absent", "tentative"].includes(status)) {
       return NextResponse.json({ error: "無効なステータスです" }, { status: 400 });
     }
 
@@ -33,12 +33,28 @@ export async function POST(request: Request) {
     // 日程情報を取得（締切チェック・当日キャンセル判定用）
     const { data: schedule } = await supabase
       .from("schedules")
-      .select("date, deadline")
+      .select("date, deadline, team_id")
       .eq("id", scheduleId)
       .single();
 
     if (!schedule) {
       return NextResponse.json({ error: "日程が見つかりません" }, { status: 404 });
+    }
+
+    // tentative を新たに選ぶには team_settings.allow_tentative が必要。
+    // OFF でも既存の tentative を別ステータスへ切り替える操作は許可。
+    if (status === "tentative") {
+      const { data: ts } = await supabase
+        .from("team_settings")
+        .select("allow_tentative")
+        .eq("team_id", schedule.team_id)
+        .single();
+      if (!ts?.allow_tentative) {
+        return NextResponse.json(
+          { error: "このチームでは「検討中」回答は無効です" },
+          { status: 403 }
+        );
+      }
     }
 
     // 新規回答は締切後不可（既存の切り替えは許可）
