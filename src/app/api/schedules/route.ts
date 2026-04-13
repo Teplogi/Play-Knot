@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const { teamId, date, endDate, location, note, capacity, deadline } = await request.json();
+    const { teamId, date, endDate, location, note, capacity, deadline, creatorStatus, creatorComment } = await request.json();
 
     const { data: schedule, error } = await supabase
       .from("schedules")
@@ -34,6 +34,22 @@ export async function POST(request: Request) {
         { error: error.code === "42501" ? "ホスト権限が必要です" : "日程の作成に失敗しました", detail: error.message },
         { status }
       );
+    }
+
+    // 作成者自身の出欠回答を同時に登録（デフォルト「参加」）。回答忘れ防止。
+    const validStatuses = ["attend", "absent", "tentative"] as const;
+    const initialStatus = validStatuses.includes(creatorStatus) ? creatorStatus : "attend";
+    const { error: attErr } = await supabase
+      .from("attendances")
+      .insert({
+        schedule_id: schedule.id,
+        user_id: user.id,
+        status: initialStatus,
+        comment: creatorComment || null,
+      });
+    if (attErr) {
+      // 出欠側が失敗しても日程作成自体は成功扱い。詳細はログだけに残す。
+      console.error("schedules POST creator attendance insert error:", attErr);
     }
 
     return NextResponse.json(schedule);

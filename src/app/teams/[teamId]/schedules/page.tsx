@@ -26,7 +26,7 @@ export default async function SchedulesPage({
       .order("date", { ascending: true }),
     supabase
       .from("team_settings")
-      .select("default_start_time, default_end_time, attendance_deadline_hours_before, default_locations")
+      .select("default_start_time, default_end_time, attendance_deadline_hours_before, default_locations, allow_tentative")
       .eq("team_id", teamId)
       .single(),
   ]);
@@ -41,6 +41,7 @@ export default async function SchedulesPage({
     endTime: teamSettings.default_end_time ?? "21:00",
     deadlineHoursBefore: teamSettings.attendance_deadline_hours_before ?? 1,
     locations: teamSettings.default_locations ?? [],
+    allowTentative: teamSettings.allow_tentative ?? false,
   } : undefined;
 
   return (

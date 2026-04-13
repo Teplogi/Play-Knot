@@ -24,6 +24,7 @@ type Props = {
     endTime?: string;
     deadlineHoursBefore?: number;
     locations?: string[];
+    allowTentative?: boolean;
   };
 };
 

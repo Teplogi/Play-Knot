@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
+type CreatorStatus = "attend" | "tentative" | "absent";
+
 type CreateScheduleDialogProps = {
   teamId: string;
   defaults?: {
@@ -21,6 +23,7 @@ type CreateScheduleDialogProps = {
     endTime?: string;
     deadlineHoursBefore?: number;
     locations?: string[];
+    allowTentative?: boolean;
   };
 };
 
@@ -59,6 +62,8 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
   const [deadline, setDeadline] = useState("");
   // ユーザが締切を手動編集したら以後は自動同期を止める
   const [deadlineTouched, setDeadlineTouched] = useState(false);
+  // 作成者自身の出欠（デフォルト: 参加）
+  const [creatorStatus, setCreatorStatus] = useState<CreatorStatus>("attend");
 
   // 日付・開始時刻・デフォルト締切時間から自動計算
   useEffect(() => {
@@ -98,6 +103,7 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
           note,
           capacity: capacityNum,
           deadline: deadlineISO,
+          creatorStatus,
         }),
       });
 
@@ -118,6 +124,7 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
       setCapacity("");
       setDeadline("");
       setDeadlineTouched(false);
+      setCreatorStatus("attend");
       router.refresh();
     } catch {
       toast.error("エラーが発生しました");
@@ -232,6 +239,50 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
               placeholder="持ち物や注意事項など"
             />
           </div>
+
+          {/* 作成者自身の出欠（回答忘れ防止。デフォルトは「参加」） */}
+          <div className="space-y-2 rounded-lg border border-indigo-100 bg-indigo-50/40 p-3">
+            <Label className="text-sm">あなたの出欠</Label>
+            <p className="text-xs text-gray-500">作成と同時に自分の回答も登録します。あとから変更可能です。</p>
+            <div className={`grid gap-2 ${defaults?.allowTentative ? "grid-cols-3" : "grid-cols-2"}`}>
+              <button
+                type="button"
+                onClick={() => setCreatorStatus("attend")}
+                className={`h-10 rounded-lg border text-sm font-semibold transition-colors ${
+                  creatorStatus === "attend"
+                    ? "border-green-400 bg-green-500 text-white"
+                    : "border-green-200 bg-white text-green-700 hover:bg-green-50"
+                }`}
+              >
+                参加
+              </button>
+              {defaults?.allowTentative && (
+                <button
+                  type="button"
+                  onClick={() => setCreatorStatus("tentative")}
+                  className={`h-10 rounded-lg border text-sm font-semibold transition-colors ${
+                    creatorStatus === "tentative"
+                      ? "border-amber-400 bg-amber-500 text-white"
+                      : "border-amber-200 bg-white text-amber-700 hover:bg-amber-50"
+                  }`}
+                >
+                  検討中
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setCreatorStatus("absent")}
+                className={`h-10 rounded-lg border text-sm font-semibold transition-colors ${
+                  creatorStatus === "absent"
+                    ? "border-red-400 bg-red-500 text-white"
+                    : "border-red-200 bg-white text-red-700 hover:bg-red-50"
+                }`}
+              >
+                不参加
+              </button>
+            </div>
+          </div>
+
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               キャンセル
