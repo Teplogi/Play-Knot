@@ -27,6 +27,7 @@ export type TeamSettings = {
   defaultStartTime: string;
   defaultEndTime: string;
   attendanceDeadlineHoursBefore: number;
+  allowTentative: boolean;
 
   defaultDivideBy: "team_count" | "members_per_team";
   defaultDivideValue: number;
@@ -256,6 +257,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
           default_start_time: settings.defaultStartTime,
           default_end_time: settings.defaultEndTime,
           attendance_deadline_hours_before: settings.attendanceDeadlineHoursBefore,
+          allow_tentative: settings.allowTentative,
         }),
       });
       if (!res.ok) {
@@ -749,6 +751,15 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
               />
               <span className="text-sm text-gray-500">時間前に締め切る（0 で開始時刻）</span>
             </div>
+          </div>
+
+          <div className="pt-2 border-t border-gray-100">
+            <Toggle
+              checked={settings.allowTentative}
+              onChange={(v) => update("allowTentative", v)}
+              label="「検討中」回答を有効にする"
+              description="メンバーが参加/不参加に加えて「検討中」を選択できます。検討中は定員・チーム分け・統計の母数に含まれません（当日までに参加へ変更された場合のみ出席としてカウント）。OFFに戻しても既存の回答は保持されます。"
+            />
           </div>
 
           <div className="flex justify-end">

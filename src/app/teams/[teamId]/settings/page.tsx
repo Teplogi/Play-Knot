@@ -57,6 +57,7 @@ export default async function SettingsPage({
     defaultStartTime: teamSettings?.default_start_time ?? "19:00",
     defaultEndTime: teamSettings?.default_end_time ?? "21:00",
     attendanceDeadlineHoursBefore: teamSettings?.attendance_deadline_hours_before ?? 1,
+    allowTentative: teamSettings?.allow_tentative ?? false,
     defaultDivideBy: (teamSettings?.default_divide_by as "team_count" | "members_per_team") ?? "team_count",
     defaultDivideValue: teamSettings?.default_divide_value ?? 2,
     defaultDivideMethod: (teamSettings?.default_divide_method as "random" | "gender_equal") ?? "random",

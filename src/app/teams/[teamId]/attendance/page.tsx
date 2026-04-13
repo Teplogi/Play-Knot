@@ -29,7 +29,7 @@ export default async function AttendancePage({
   }));
 
   const attendanceInputs = (schedules ?? []).flatMap((s) =>
-    (s.attendances ?? []).map((a: { user_id: string; status: "attend" | "absent"; created_at: string; updated_at: string }) => ({
+    (s.attendances ?? []).map((a: { user_id: string; status: "attend" | "absent" | "tentative"; created_at: string; updated_at: string }) => ({
       user_id: a.user_id,
       status: a.status,
       created_at: a.created_at,

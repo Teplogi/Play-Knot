@@ -71,6 +71,8 @@ export function TeamHomeClient({ teamId, isHost, memberCount, nextSchedule, myAt
                   <span className="text-sm text-gray-500">あなたの回答：</span>
                   {myAttendance.status === "attend" ? (
                     <Badge className="bg-green-100 text-green-700 border-green-200">○ 参加</Badge>
+                  ) : myAttendance.status === "tentative" ? (
+                    <Badge className="bg-amber-100 text-amber-700 border-amber-200">？ 検討中</Badge>
                   ) : (
                     <Badge className="bg-red-100 text-red-700 border-red-200">✕ 不参加</Badge>
                   )}

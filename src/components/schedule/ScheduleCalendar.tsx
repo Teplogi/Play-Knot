@@ -131,6 +131,8 @@ export function ScheduleCalendar({ teamId, schedules, userId }: Props) {
                         className={`rounded px-1 py-0.5 text-[10px] leading-tight truncate cursor-pointer transition-colors ${
                           myAtt?.status === "attend"
                             ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : myAtt?.status === "tentative"
+                            ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
                             : myAtt?.status === "absent"
                             ? "bg-red-50 text-red-600 hover:bg-red-100"
                             : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
@@ -154,6 +156,10 @@ export function ScheduleCalendar({ teamId, schedules, userId }: Props) {
         <span className="flex items-center gap-1">
           <span className="w-2.5 h-2.5 rounded-sm bg-green-100 border border-green-200" />
           参加
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-sm bg-amber-100 border border-amber-200" />
+          検討中
         </span>
         <span className="flex items-center gap-1">
           <span className="w-2.5 h-2.5 rounded-sm bg-red-50 border border-red-200" />

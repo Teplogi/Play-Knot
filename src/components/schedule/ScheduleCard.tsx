@@ -16,9 +16,11 @@ type ScheduleCardProps = {
 export function ScheduleCard({ schedule, teamId, totalMembers, userId }: ScheduleCardProps) {
   const attendCount = schedule.attendances.filter((a) => a.status === "attend").length;
   const absentCount = schedule.attendances.filter((a) => a.status === "absent").length;
+  const tentativeCount = schedule.attendances.filter((a) => a.status === "tentative").length;
   const unanswered = totalMembers - schedule.attendances.length;
   const myAttendance = schedule.attendances.find((a) => a.user_id === userId);
   const hasCapacity = schedule.capacity !== null && schedule.capacity !== undefined;
+  // 定員は「参加確定」のみでカウント（検討中は含めない）
   const isFull = hasCapacity && attendCount >= (schedule.capacity as number);
 
   return (
@@ -50,6 +52,8 @@ export function ScheduleCard({ schedule, teamId, totalMembers, userId }: Schedul
             {myAttendance ? (
               myAttendance.status === "attend" ? (
                 <Badge className="bg-green-50 text-green-700 border-green-200 text-xs">○ 参加</Badge>
+              ) : myAttendance.status === "tentative" ? (
+                <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">？ 検討中</Badge>
               ) : (
                 <Badge className="bg-red-50 text-red-700 border-red-200 text-xs">✕ 不参加</Badge>
               )
@@ -64,6 +68,9 @@ export function ScheduleCard({ schedule, teamId, totalMembers, userId }: Schedul
             参加 {attendCount}
             {hasCapacity && <span className="text-gray-400 font-normal">/{schedule.capacity}</span>}
           </span>
+          {tentativeCount > 0 && (
+            <span className="text-amber-600 font-medium">検討中 {tentativeCount}</span>
+          )}
           <span className="text-red-500 font-medium">不参加 {absentCount}</span>
           <span className="text-gray-400">未回答 {unanswered}</span>
           {isFull && (

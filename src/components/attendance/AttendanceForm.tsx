@@ -12,9 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
+type AttendanceStatusValue = "attend" | "absent" | "tentative";
+
 type AttendanceFormProps = {
   scheduleId: string;
-  currentStatus: "attend" | "absent" | null;
+  currentStatus: AttendanceStatusValue | null;
   currentComment: string;
   onUpdated: () => void;
   /** スケジュールの日付（ISO文字列） */
@@ -25,6 +27,8 @@ type AttendanceFormProps = {
   capacity?: number | null;
   /** 自分を除いた参加確定者数 */
   othersAttendCount?: number;
+  /** チーム設定: 「検討中」を新規選択できるか */
+  allowTentative?: boolean;
 };
 
 export function AttendanceForm({
@@ -36,10 +40,11 @@ export function AttendanceForm({
   deadline = null,
   capacity = null,
   othersAttendCount = 0,
+  allowTentative = false,
 }: AttendanceFormProps) {
   const [comment, setComment] = useState(currentComment);
   const [loading, setLoading] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<"attend" | "absent" | null>(currentStatus);
+  const [selectedStatus, setSelectedStatus] = useState<AttendanceStatusValue | null>(currentStatus);
   const [showComment, setShowComment] = useState(!!currentComment);
   const [isEditing, setIsEditing] = useState(!currentStatus);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -56,16 +61,16 @@ export function AttendanceForm({
   const deadlinePassed = deadline !== null && deadline !== undefined && new Date() > new Date(deadline);
   const blockNewResponse = deadlinePassed && !currentStatus;
 
-  // 当日キャンセルかどうかの判定
-  const isSamedayCancelAttempt = (status: "attend" | "absent") => {
+  // 当日キャンセルかどうかの判定（参加確定 → 不参加 のみ対象。tentative からは対象外）
+  const isSamedayCancelAttempt = (status: AttendanceStatusValue) => {
     if (status !== "absent" || !userIsCurrentlyAttending) return false;
     const sd = new Date(scheduleDate);
     const scheduleDayStart = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate());
     return new Date() >= scheduleDayStart;
   };
 
-  const handleSubmit = async (status: "attend" | "absent") => {
-    // 満員ガード
+  const handleSubmit = async (status: AttendanceStatusValue) => {
+    // 満員ガード（tentative は定員消費しないので対象外）
     if (status === "attend" && !userIsCurrentlyAttending && capacity !== null && othersAttendCount >= capacity) {
       toast.error("定員に達しているため参加できません");
       return;
@@ -80,7 +85,7 @@ export function AttendanceForm({
     await submitAttendance(status);
   };
 
-  const submitAttendance = async (status: "attend" | "absent") => {
+  const submitAttendance = async (status: AttendanceStatusValue) => {
     setLoading(true);
     const previousStatus = selectedStatus;
     setSelectedStatus(status);
@@ -103,7 +108,8 @@ export function AttendanceForm({
           description: "出欠の変更が反映されました",
         });
       } else {
-        toast.success(status === "attend" ? "参加で回答しました" : "不参加で回答しました");
+        const label = status === "attend" ? "参加" : status === "absent" ? "不参加" : "検討中";
+        toast.success(`${label}で回答しました`);
       }
 
       // 定員関連の遷移通知
@@ -129,38 +135,32 @@ export function AttendanceForm({
     submitAttendance("absent");
   };
 
+  // ステータス別の見た目
+  const statusStyles: Record<AttendanceStatusValue, { border: string; badge: string; text: string; label: string }> = {
+    attend: { border: "border-green-200 bg-green-50/70", badge: "bg-green-500 text-white", text: "text-green-800", label: "参加" },
+    absent: { border: "border-red-200 bg-red-50/70", badge: "bg-red-500 text-white", text: "text-red-800", label: "不参加" },
+    tentative: { border: "border-amber-200 bg-amber-50/70", badge: "bg-amber-500 text-white", text: "text-amber-800", label: "検討中" },
+  };
+
   // 回答済み表示
   if (selectedStatus && !isEditing) {
+    const s = statusStyles[selectedStatus];
     return (
       <div className="space-y-3">
         {/* 回答済みステータス */}
-        <div
-          className={`rounded-xl border-2 p-4 ${
-            selectedStatus === "attend"
-              ? "border-green-200 bg-green-50/70"
-              : "border-red-200 bg-red-50/70"
-          }`}
-        >
+        <div className={`rounded-xl border-2 p-4 ${s.border}`}>
           <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                selectedStatus === "attend"
-                  ? "bg-green-500 text-white"
-                  : "bg-red-500 text-white"
-              }`}
-            >
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${s.badge}`}>
               {selectedStatus === "attend" ? (
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-              ) : (
+              ) : selectedStatus === "absent" ? (
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9.247a3.75 3.75 0 117.061 2.127c-.404 1.034-1.362 1.778-2.466 1.951-.42.066-.823.38-.823.806V15m0 3h.008v.008H12V18z" /></svg>
               )}
             </div>
             <div className="flex-1">
-              <p className={`font-semibold ${
-                selectedStatus === "attend" ? "text-green-800" : "text-red-800"
-              }`}>
-                {selectedStatus === "attend" ? "参加" : "不参加"}で回答済み
-              </p>
+              <p className={`font-semibold ${s.text}`}>{s.label}で回答済み</p>
               {comment && (
                 <p className="text-sm text-gray-500 mt-0.5">{comment}</p>
               )}
@@ -251,8 +251,8 @@ export function AttendanceForm({
       {selectedStatus && isEditing && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500">
-            現在の回答: <span className={`font-medium ${selectedStatus === "attend" ? "text-green-600" : "text-red-600"}`}>
-              {selectedStatus === "attend" ? "参加" : "不参加"}
+            現在の回答: <span className={`font-medium ${selectedStatus === "attend" ? "text-green-600" : selectedStatus === "absent" ? "text-red-600" : "text-amber-600"}`}>
+              {statusStyles[selectedStatus].label}
             </span>
           </p>
           <button
@@ -264,40 +264,84 @@ export function AttendanceForm({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <Button
-          onClick={() => handleSubmit("attend")}
-          disabled={loading || attendDisabled}
-          className={`h-14 rounded-xl text-base font-semibold transition-all ${
-            selectedStatus === "attend"
-              ? "bg-green-500 hover:bg-green-600 text-white shadow-md shadow-green-200"
-              : attendDisabled
-              ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
-              : "bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
-          }`}
-          aria-label={attendDisabled ? "定員に達しているため参加できません" : "参加する"}
-        >
-          <span className="flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+      {/* 検討中ボタンは allowTentative ON または既に tentative の場合に表示 */}
+      {(allowTentative || selectedStatus === "tentative") ? (
+        <div className="grid grid-cols-3 gap-2">
+          <Button
+            onClick={() => handleSubmit("attend")}
+            disabled={loading || attendDisabled}
+            className={`h-14 rounded-xl text-sm font-semibold transition-all ${
+              selectedStatus === "attend"
+                ? "bg-green-500 hover:bg-green-600 text-white shadow-md shadow-green-200"
+                : attendDisabled
+                ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                : "bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
+            }`}
+            aria-label={attendDisabled ? "定員に達しているため参加できません" : "参加する"}
+          >
             {attendDisabled ? "満員" : "参加"}
-          </span>
-        </Button>
-        <Button
-          onClick={() => handleSubmit("absent")}
-          disabled={loading}
-          className={`h-14 rounded-xl text-base font-semibold transition-all ${
-            selectedStatus === "absent"
-              ? "bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-200"
-              : "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
-          }`}
-          aria-label="不参加にする"
-        >
-          <span className="flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </Button>
+          <Button
+            onClick={() => handleSubmit("tentative")}
+            disabled={loading || (!allowTentative && selectedStatus !== "tentative")}
+            className={`h-14 rounded-xl text-sm font-semibold transition-all ${
+              selectedStatus === "tentative"
+                ? "bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-200"
+                : "bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200"
+            }`}
+            aria-label="検討中にする"
+          >
+            検討中
+          </Button>
+          <Button
+            onClick={() => handleSubmit("absent")}
+            disabled={loading}
+            className={`h-14 rounded-xl text-sm font-semibold transition-all ${
+              selectedStatus === "absent"
+                ? "bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-200"
+                : "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
+            }`}
+            aria-label="不参加にする"
+          >
             不参加
-          </span>
-        </Button>
-      </div>
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            onClick={() => handleSubmit("attend")}
+            disabled={loading || attendDisabled}
+            className={`h-14 rounded-xl text-base font-semibold transition-all ${
+              selectedStatus === "attend"
+                ? "bg-green-500 hover:bg-green-600 text-white shadow-md shadow-green-200"
+                : attendDisabled
+                ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                : "bg-green-50 hover:bg-green-100 text-green-700 border border-green-200"
+            }`}
+            aria-label={attendDisabled ? "定員に達しているため参加できません" : "参加する"}
+          >
+            <span className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+              {attendDisabled ? "満員" : "参加"}
+            </span>
+          </Button>
+          <Button
+            onClick={() => handleSubmit("absent")}
+            disabled={loading}
+            className={`h-14 rounded-xl text-base font-semibold transition-all ${
+              selectedStatus === "absent"
+                ? "bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-200"
+                : "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200"
+            }`}
+            aria-label="不参加にする"
+          >
+            <span className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              不参加
+            </span>
+          </Button>
+        </div>
+      )}
 
       {/* コメントアコーディオン */}
       {!showComment ? (

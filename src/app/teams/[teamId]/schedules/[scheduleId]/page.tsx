@@ -13,7 +13,7 @@ export default async function ScheduleDetailPage({
   const user = await requireUser();
   const supabase = await createClient();
 
-  const [membership, scheduleRes, totalMembersRes] = await Promise.all([
+  const [membership, scheduleRes, totalMembersRes, teamSettingsRes] = await Promise.all([
     getTeamMembership(teamId),
     supabase
       .from("schedules")
@@ -24,6 +24,11 @@ export default async function ScheduleDetailPage({
       .from("team_members")
       .select("id", { count: "exact", head: true })
       .eq("team_id", teamId),
+    supabase
+      .from("team_settings")
+      .select("allow_tentative")
+      .eq("team_id", teamId)
+      .single(),
   ]);
 
   const schedule = scheduleRes.data;
@@ -31,6 +36,7 @@ export default async function ScheduleDetailPage({
 
   const canManageSchedule = hasHostPrivilege(membership?.role ?? "guest");
   const totalMembers = totalMembersRes.count;
+  const allowTentative = teamSettingsRes.data?.allow_tentative ?? false;
 
   // 自分の出欠
   const myAttendance = schedule.attendances?.find(
@@ -45,6 +51,7 @@ export default async function ScheduleDetailPage({
       myAttendance={myAttendance}
       canManageSchedule={canManageSchedule}
       teamId={teamId}
+      allowTentative={allowTentative}
     />
   );
 }

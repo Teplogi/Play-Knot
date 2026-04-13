@@ -18,6 +18,7 @@ type Props = {
   myAttendance: AttendanceWithUser | null;
   canManageSchedule: boolean;
   teamId: string;
+  allowTentative: boolean;
 };
 
 export function ScheduleDetailClient({
@@ -27,6 +28,7 @@ export function ScheduleDetailClient({
   myAttendance,
   canManageSchedule,
   teamId,
+  allowTentative,
 }: Props) {
   const router = useRouter();
 
@@ -108,6 +110,7 @@ export function ScheduleDetailClient({
             deadline={schedule.deadline}
             capacity={schedule.capacity}
             othersAttendCount={othersAttendCount}
+            allowTentative={allowTentative}
           />
         </CardContent>
       </Card>

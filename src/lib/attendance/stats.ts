@@ -14,7 +14,9 @@ type MemberInput = {
 
 type AttendanceInput = {
   user_id: string;
-  status: "attend" | "absent";
+  // tentative は統計から除外（締切までに確定回答へ変わらなかったケース）。
+  // 当日までに attend へ変更された場合は status が "attend" になるため自動でカウントされる。
+  status: "attend" | "absent" | "tentative";
   created_at: string;
   updated_at: string;
   /** 紐づくスケジュールの日付 */
