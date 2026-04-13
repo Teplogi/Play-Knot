@@ -21,6 +21,15 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
+      if (error.message === "host_team_limit_reached") {
+        return NextResponse.json(
+          {
+            error:
+              "ホストを兼任できるのは最大 2 チームまでです。1 チームを削除するか他の方へ譲渡すると新しく作成できます。",
+          },
+          { status: 409 }
+        );
+      }
       // 42501 = insufficient_privilege（権限なし or 認証なし）
       const status = error.code === "42501" ? 403 : 500;
       const message =
