@@ -105,6 +105,7 @@ export function ScheduleDetailClient({
             currentComment={myAttendance?.comment || ""}
             onUpdated={() => router.refresh()}
             scheduleDate={schedule.date}
+            deadline={schedule.deadline}
             capacity={schedule.capacity}
             othersAttendCount={othersAttendCount}
           />

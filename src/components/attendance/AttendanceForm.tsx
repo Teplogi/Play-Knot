@@ -19,6 +19,8 @@ type AttendanceFormProps = {
   onUpdated: () => void;
   /** スケジュールの日付（ISO文字列） */
   scheduleDate: string;
+  /** 回答締切（ISO文字列、任意） */
+  deadline?: string | null;
   /** 定員（null なら無制限） */
   capacity?: number | null;
   /** 自分を除いた参加確定者数 */
@@ -31,6 +33,7 @@ export function AttendanceForm({
   currentComment,
   onUpdated,
   scheduleDate,
+  deadline = null,
   capacity = null,
   othersAttendCount = 0,
 }: AttendanceFormProps) {
@@ -47,6 +50,11 @@ export function AttendanceForm({
   const isFull = capacity !== null && currentAttendCount >= capacity;
   const wouldBeFullOnAttend = capacity !== null && othersAttendCount + 1 >= capacity;
   const attendDisabled = !userIsCurrentlyAttending && isFull;
+
+  // 新規回答は締切後不可（既存の切り替えは許可）。
+  // ホストが締切を未来にずらせば再び回答可能になる。
+  const deadlinePassed = deadline !== null && deadline !== undefined && new Date() > new Date(deadline);
+  const blockNewResponse = deadlinePassed && !currentStatus;
 
   // 当日キャンセルかどうかの判定
   const isSamedayCancelAttempt = (status: "attend" | "absent") => {
@@ -193,6 +201,27 @@ export function AttendanceForm({
           onOpenChange={setConfirmOpen}
           onConfirm={handleConfirmSamedayCancel}
         />
+      </div>
+    );
+  }
+
+  // 未回答かつ締切後: 回答ブロック
+  if (blockNewResponse) {
+    return (
+      <div className="rounded-xl border-2 border-amber-200 bg-amber-50/70 p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-900">締切済みです</p>
+            <p className="text-sm text-amber-800 mt-1">
+              ホストに連絡してください。締切が延長されると回答できるようになります。
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

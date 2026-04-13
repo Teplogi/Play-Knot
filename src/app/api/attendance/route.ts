@@ -30,24 +30,35 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .single();
 
+    // 日程情報を取得（締切チェック・当日キャンセル判定用）
+    const { data: schedule } = await supabase
+      .from("schedules")
+      .select("date, deadline")
+      .eq("id", scheduleId)
+      .single();
+
+    if (!schedule) {
+      return NextResponse.json({ error: "日程が見つかりません" }, { status: 404 });
+    }
+
+    // 新規回答は締切後不可（既存の切り替えは許可）
+    if (!existing && schedule.deadline && new Date() > new Date(schedule.deadline)) {
+      return NextResponse.json(
+        { error: "締切済みです。ホストに連絡してください" },
+        { status: 403 }
+      );
+    }
+
     let isSamedayCancel = false;
 
     if (existing) {
       // 当日キャンセル検知：参加→不参加に変更 かつ 練習日の当日0:00以降
       if (existing.status === "attend" && status === "absent") {
-        const { data: schedule } = await supabase
-          .from("schedules")
-          .select("date")
-          .eq("id", scheduleId)
-          .single();
-
-        if (schedule) {
-          const scheduleDate = new Date(schedule.date);
-          const scheduleDayStart = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
-          const now = new Date();
-          if (now >= scheduleDayStart) {
-            isSamedayCancel = true;
-          }
+        const scheduleDate = new Date(schedule.date);
+        const scheduleDayStart = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
+        const now = new Date();
+        if (now >= scheduleDayStart) {
+          isSamedayCancel = true;
         }
       }
 
