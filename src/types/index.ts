@@ -7,6 +7,7 @@ export type User = {
   birth_year: number | null;
   position: string;
   can_create_team: boolean;
+  notification_email: string | null;
   created_at: string;
 };
 
@@ -99,6 +100,10 @@ export type InviteToken = {
   created_at: string;
 };
 
+// 通知日数の選択肢 (0 = 通知しない、1/3/7 = N日前)
+export type NotificationDaysBefore = 0 | 1 | 3 | 7;
+export const NOTIFICATION_DAYS_OPTIONS: NotificationDaysBefore[] = [0, 1, 3, 7];
+
 // 通知設定（ユーザーごと・public.notification_preferencesテーブルに対応）
 export type NotificationPreference = {
   id: string;
@@ -109,6 +114,9 @@ export type NotificationPreference = {
   reminder: boolean;
   deadline: boolean;
   reopened: boolean;
+  cancellation: boolean;
+  reminder_days_before: NotificationDaysBefore;
+  deadline_days_before: NotificationDaysBefore;
   updated_at: string;
   created_at: string;
 };
@@ -120,6 +128,9 @@ export const DEFAULT_NOTIFICATION_PREFS = {
   reminder: true,
   deadline: true,
   reopened: true,
+  cancellation: true,
+  reminder_days_before: 3 as NotificationDaysBefore,
+  deadline_days_before: 1 as NotificationDaysBefore,
 } as const;
 
 // リレーション付きの結合型
