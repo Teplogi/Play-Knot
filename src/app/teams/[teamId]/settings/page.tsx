@@ -32,11 +32,11 @@ export default async function SettingsPage({
     supabase.from("team_members").select("user_id, role, users(name)").eq("team_id", teamId),
     supabase
       .from("notification_preferences")
-      .select("schedule_created, schedule_changed, reminder, deadline, reopened")
+      .select("schedule_created, schedule_changed, reminder, deadline, reopened, cancellation, reminder_days_before, deadline_days_before")
       .eq("team_id", teamId)
       .eq("user_id", user.id)
       .single(),
-    supabase.from("users").select("name, gender, birth_year, position").eq("id", user.id).single(),
+    supabase.from("users").select("name, gender, birth_year, position, notification_email").eq("id", user.id).single(),
   ]);
 
   const role = (membership?.role ?? "guest") as TeamRole;
@@ -86,6 +86,9 @@ export default async function SettingsPage({
     reminder: notifData?.reminder ?? true,
     deadline: notifData?.deadline ?? true,
     reopened: notifData?.reopened ?? true,
+    cancellation: notifData?.cancellation ?? true,
+    reminder_days_before: (notifData?.reminder_days_before ?? 3) as 0 | 1 | 3 | 7,
+    deadline_days_before: (notifData?.deadline_days_before ?? 1) as 0 | 1 | 3 | 7,
   };
 
   const initialAccount: AccountSettings = {
@@ -94,6 +97,7 @@ export default async function SettingsPage({
     birthYear: profile?.birth_year ?? null,
     position: profile?.position ?? "",
     scheduleView: "list",
+    notificationEmail: profile?.notification_email ?? "",
   };
 
   return (

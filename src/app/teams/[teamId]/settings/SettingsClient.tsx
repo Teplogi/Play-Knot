@@ -44,7 +44,7 @@ export type InviteLink = {
   expired: boolean;
 };
 
-import type { TeamRole } from "@/types";
+import type { TeamRole, NotificationDaysBefore } from "@/types";
 import { hasHostPrivilege } from "@/types";
 
 type MemberOption = { id: string; name: string; role: TeamRole };
@@ -55,6 +55,9 @@ export type NotificationPref = {
   reminder: boolean;
   deadline: boolean;
   reopened: boolean;
+  cancellation: boolean;
+  reminder_days_before: NotificationDaysBefore;
+  deadline_days_before: NotificationDaysBefore;
 };
 
 export type AccountSettings = {
@@ -63,6 +66,7 @@ export type AccountSettings = {
   birthYear: number | null;
   position: string;
   scheduleView: "list" | "calendar";
+  notificationEmail: string;
 };
 
 type SettingsClientProps = {
@@ -109,39 +113,104 @@ function Section({
   );
 }
 
+function InfoHint({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        aria-label="詳細を表示"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-300 text-gray-500 text-[10px] font-semibold hover:bg-gray-100 transition"
+      >
+        ?
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          className="absolute z-20 top-6 left-1/2 -translate-x-1/2 w-64 p-3 rounded-lg bg-gray-900 text-white text-xs leading-relaxed shadow-lg whitespace-pre-wrap"
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function DaysBeforeSelect({
+  value,
+  onChange,
+  label,
+}: {
+  value: NotificationDaysBefore;
+  onChange: (v: NotificationDaysBefore) => void;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-gray-600">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value) as NotificationDaysBefore)}
+        className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white"
+      >
+        <option value={0}>通知しない</option>
+        <option value={1}>1日前</option>
+        <option value={3}>3日前</option>
+        <option value={7}>7日前</option>
+      </select>
+    </div>
+  );
+}
+
 function Toggle({
   checked,
   onChange,
   label,
   description,
+  hint,
+  children,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label: string;
   description?: string;
+  hint?: string;
+  children?: React.ReactNode;
 }) {
   return (
-    <label className="flex items-start gap-3 cursor-pointer py-1">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors mt-0.5 ${
-          checked ? "bg-indigo-600" : "bg-gray-200"
-        }`}
-      >
-        <span
-          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-            checked ? "translate-x-5" : "translate-x-0.5"
+    <div className="py-1">
+      <label className="flex items-start gap-3 cursor-pointer">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          onClick={() => onChange(!checked)}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors mt-0.5 ${
+            checked ? "bg-indigo-600" : "bg-gray-200"
           }`}
-        />
-      </button>
-      <div className="flex-1">
-        <div className="text-sm font-medium text-gray-900">{label}</div>
-        {description && <div className="text-xs text-gray-500 mt-0.5">{description}</div>}
-      </div>
-    </label>
+        >
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+              checked ? "translate-x-5" : "translate-x-0.5"
+            }`}
+          />
+        </button>
+        <div className="flex-1">
+          <div className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+            <span>{label}</span>
+            {hint && <InfoHint text={hint} />}
+          </div>
+          {description && <div className="text-xs text-gray-500 mt-0.5">{description}</div>}
+        </div>
+      </label>
+      {checked && children && <div className="pl-14 mt-2">{children}</div>}
+    </div>
   );
 }
 
@@ -172,13 +241,17 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
           gender: account.gender,
           birth_year: account.birthYear,
           position: account.position,
+          notification_email: account.notificationEmail,
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || "保存に失敗しました");
+      }
       try { localStorage.setItem("playknot-schedule-view", account.scheduleView); } catch { /* noop */ }
       toast.success("アカウント情報を保存しました");
-    } catch {
-      toast.error("アカウント情報の保存に失敗しました");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "アカウント情報の保存に失敗しました");
     } finally {
       setAccountSaving(false);
     }
@@ -188,7 +261,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
   const [notifPrefs, setNotifPrefs] = useState<NotificationPref>(initialNotificationPrefs);
   const [notifSaving, setNotifSaving] = useState(false);
 
-  const updateNotif = <K extends keyof NotificationPref>(key: K, value: boolean) => {
+  const updateNotif = <K extends keyof NotificationPref>(key: K, value: NotificationPref[K]) => {
     setNotifPrefs((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -601,6 +674,25 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
             />
           </div>
           <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="account-notif-email">通知用メールアドレス（任意）</Label>
+              <InfoHint
+                text={
+                  "チームからの各種お知らせメールを受け取るアドレスです。\n\n" +
+                  "未入力の場合は、ログインに使っている Google アカウントのメールアドレスに届きます。仕事用の Gmail と通知を分けたい場合などにご利用ください。"
+                }
+              />
+            </div>
+            <Input
+              id="account-notif-email"
+              type="email"
+              value={account.notificationEmail}
+              onChange={(e) => updateAccount("notificationEmail", e.target.value)}
+              placeholder="空欄ならログイン用のメールアドレスに送信"
+              maxLength={254}
+            />
+          </div>
+          <div className="space-y-2">
             <Label>日程のデフォルト表示</Label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -780,7 +872,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-xs text-blue-700">
-              この設定はあなた個人のものです。他のメンバーの通知には影響しません。
+              この設定はあなた個人のものです。他のメンバーの通知には影響しません。通知はメールで送信されます。
             </p>
           </div>
           <Toggle
@@ -788,31 +880,66 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
             onChange={(v) => updateNotif("schedule_created", v)}
             label="日程追加"
             description="新しい日程が追加されたときに通知を受け取る"
+            hint="ホストが新規の日程を作成した直後に、チームの全メンバーに送られる通知です。作成した本人には送られません。"
           />
           <Toggle
             checked={notifPrefs.schedule_changed}
             onChange={(v) => updateNotif("schedule_changed", v)}
             label="日程変更・削除"
-            description="日程の変更やキャンセルがあったときに通知を受け取る"
+            description="日程の日時・場所が変更されたり削除されたときに通知を受け取る"
+            hint="既存の日程が変更・削除されたときに送られる通知です。日時や場所が変わった可能性があるので、受信後は出欠を見直してください。"
           />
           <Toggle
             checked={notifPrefs.reminder}
             onChange={(v) => updateNotif("reminder", v)}
             label="未回答リマインド"
-            description="出欠が未回答の場合にリマインド通知を受け取る"
-          />
+            description="試合日が近づいても未回答のとき、朝9時に通知を受け取る"
+            hint={
+              "出欠が未回答のまま試合日が近づいたときに、朝9時に自動送信されます。\n\n" +
+              "送信タイミングを「何日前」でカスタマイズできます。既に回答済みの場合は送信されません。"
+            }
+          >
+            <DaysBeforeSelect
+              value={notifPrefs.reminder_days_before}
+              onChange={(v) => updateNotif("reminder_days_before", v)}
+              label="リマインドを送るタイミング"
+            />
+          </Toggle>
           <Toggle
             checked={notifPrefs.deadline}
             onChange={(v) => updateNotif("deadline", v)}
             label="締め切り通知"
-            description="出欠回答の締め切りが近づいたときに通知を受け取る"
-          />
+            description="出欠回答の締切日が近いとき、朝9時に通知を受け取る"
+            hint={
+              "日程に回答締切が設定されている場合のみ送られます。\n\n" +
+              "締切が設定されていない日程には送信されません。送信タイミングをカスタマイズできます。"
+            }
+          >
+            <DaysBeforeSelect
+              value={notifPrefs.deadline_days_before}
+              onChange={(v) => updateNotif("deadline_days_before", v)}
+              label="締切通知を送るタイミング"
+            />
+          </Toggle>
           <Toggle
             checked={notifPrefs.reopened}
             onChange={(v) => updateNotif("reopened", v)}
             label="再募集通知"
-            description="キャンセルが出て空きができたときに通知を受け取る"
+            description="満員だった日程に、キャンセルで空きができたときに通知を受け取る"
+            hint="定員つきの日程が満員になった後、誰かがキャンセルして空きができた瞬間に送られます。すでに参加と回答している人には送信されません。"
           />
+          {isHostOrCoHost && (
+            <Toggle
+              checked={notifPrefs.cancellation}
+              onChange={(v) => updateNotif("cancellation", v)}
+              label="キャンセル通知 (ホスト向け)"
+              description="メンバーが「参加」→「キャンセル」に変更したときに通知を受け取る"
+              hint={
+                "ホスト・共同ホストだけが受け取る通知です。\n\n" +
+                "参加予定メンバーがキャンセルに切り替えたタイミングで送信されます。当日キャンセルも同じタイミングで届きます。"
+              }
+            />
+          )}
           <div className="flex justify-end pt-2">
             <Button onClick={saveNotifications} disabled={notifSaving} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">
               {notifSaving ? "保存中..." : "保存"}

@@ -44,11 +44,28 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const { teamId, schedule_created, schedule_changed, reminder, deadline, reopened } =
-      await request.json();
+    const {
+      teamId,
+      schedule_created,
+      schedule_changed,
+      reminder,
+      deadline,
+      reopened,
+      cancellation,
+      reminder_days_before,
+      deadline_days_before,
+    } = await request.json();
 
     if (!teamId) {
       return NextResponse.json({ error: "teamIdが必要です" }, { status: 400 });
+    }
+
+    const ALLOWED_DAYS = [0, 1, 3, 7];
+    if (
+      (reminder_days_before !== undefined && !ALLOWED_DAYS.includes(reminder_days_before)) ||
+      (deadline_days_before !== undefined && !ALLOWED_DAYS.includes(deadline_days_before))
+    ) {
+      return NextResponse.json({ error: "通知日数の値が不正です" }, { status: 400 });
     }
 
     // チームメンバーであることを確認
@@ -74,6 +91,9 @@ export async function PUT(request: Request) {
           reminder,
           deadline,
           reopened,
+          cancellation,
+          reminder_days_before,
+          deadline_days_before,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,team_id" }

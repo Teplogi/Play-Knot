@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { sendEmail } from "@/lib/email/resend";
-import { cancelNotificationTemplate } from "@/lib/email/templates";
+import { notifyCancellation, notifyReopened } from "@/lib/email/notify";
 
 // 出欠の登録・更新（upsert）
 export async function POST(request: Request) {
@@ -33,7 +32,7 @@ export async function POST(request: Request) {
     // 日程情報を取得（締切チェック・当日キャンセル判定用）
     const { data: schedule } = await supabase
       .from("schedules")
-      .select("date, deadline, team_id")
+      .select("id, team_id, date, location, note, deadline, capacity")
       .eq("id", scheduleId)
       .single();
 
@@ -66,10 +65,12 @@ export async function POST(request: Request) {
     }
 
     let isSamedayCancel = false;
+    let wasAttendFlipToAbsent = false;
 
     if (existing) {
       // 当日キャンセル検知：参加→不参加に変更 かつ 練習日の当日0:00以降
       if (existing.status === "attend" && status === "absent") {
+        wasAttendFlipToAbsent = true;
         const scheduleDate = new Date(schedule.date);
         const scheduleDayStart = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
         const now = new Date();
@@ -94,11 +95,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "出欠の更新に失敗しました" }, { status: 500 });
       }
 
-      // 当日キャンセル時にホストへメール通知（非同期・失敗してもレスポンスに影響しない）
-      if (isSamedayCancel) {
-        notifyCancelToHosts(supabase, scheduleId, user.id, comment).catch((err) =>
-          console.error("当日キャンセル通知送信エラー:", err)
-        );
+      // 通知トリガー（非同期・失敗してもレスポンスに影響しない）
+      if (wasAttendFlipToAbsent) {
+        sendCancellationNotifications(
+          supabase,
+          schedule,
+          user.id,
+          comment,
+          isSamedayCancel
+        ).catch((err) => console.error("キャンセル通知送信エラー:", err));
       }
 
       return NextResponse.json({ attendance, isSamedayCancel });
@@ -126,53 +131,74 @@ export async function POST(request: Request) {
   }
 }
 
-// 当日キャンセル時のホスト通知（非同期処理）
-async function notifyCancelToHosts(
+// 参加→キャンセル時の通知: ホストへのキャンセル通知 + 満員解消なら再募集通知
+async function sendCancellationNotifications(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  scheduleId: string,
-  userId: string,
-  comment: string | null
+  schedule: { id: string; team_id: string; date: string; location: string; note: string | null; capacity: number | null },
+  cancellerUserId: string,
+  comment: string | null,
+  isSamedayCancel: boolean
 ) {
-  // 日程 + チーム情報を取得
-  const { data: schedule } = await supabase
-    .from("schedules")
-    .select("*, teams(id, name)")
-    .eq("id", scheduleId)
+  const { data: team } = await supabase
+    .from("teams")
+    .select("id, name")
+    .eq("id", schedule.team_id)
     .single();
+  if (!team) return;
 
-  if (!schedule) return;
-
-  const team = schedule.teams as unknown as { id: string; name: string };
-
-  // キャンセルしたユーザーの名前を取得
   const { data: cancelUser } = await supabase
     .from("users")
     .select("name")
-    .eq("id", userId)
+    .eq("id", cancellerUserId)
     .single();
 
-  // ホスト全員のメールアドレスを取得
-  const { data: hosts } = await supabase
-    .from("team_members")
-    .select("users(email)")
-    .eq("team_id", team.id)
-    .eq("role", "host");
-
-  const hostEmails = (hosts || [])
-    .map((h) => (h.users as unknown as { email: string })?.email)
-    .filter(Boolean);
-
-  if (hostEmails.length === 0) return;
-
-  const { subject, html } = cancelNotificationTemplate({
-    teamName: team.name,
-    memberName: cancelUser?.name || "不明",
-    scheduleDate: schedule.date,
-    location: schedule.location,
+  // ホスト向けキャンセル通知は従来どおり。ただし preferences.cancellation を尊重。
+  // ※ 仕様上「当日キャンセル」のみ既存では送っていたが、
+  //   preferences で ON/OFF 選択できるようになったため、通常キャンセルでも送る。
+  //   当日キャンセルは件名で区別不要 (テンプレート内で日時を明示済み)。
+  await notifyCancellation(
+    supabase,
+    {
+      id: schedule.id,
+      team_id: schedule.team_id,
+      date: schedule.date,
+      location: schedule.location,
+      note: schedule.note,
+    },
+    team,
+    cancelUser?.name || "不明",
     comment,
-    teamId: team.id,
-    scheduleId: schedule.id,
-  });
+    cancellerUserId
+  );
 
-  await sendEmail({ to: hostEmails, subject, html });
+  // 再募集通知: キャンセル前が満員だった場合のみ送信
+  // (capacity が設定されていて、いま attend 数が capacity 未満になったとき)
+  if (schedule.capacity) {
+    const { count } = await supabase
+      .from("attendances")
+      .select("id", { count: "exact", head: true })
+      .eq("schedule_id", schedule.id)
+      .eq("status", "attend");
+    const current = count ?? 0;
+    // キャンセル直後 = capacity ちょうどだったところから1つ空いた状態
+    if (current === schedule.capacity - 1) {
+      await notifyReopened(
+        supabase,
+        {
+          id: schedule.id,
+          team_id: schedule.team_id,
+          date: schedule.date,
+          location: schedule.location,
+          note: schedule.note,
+        },
+        team,
+        cancellerUserId
+      );
+    }
+  }
+
+  // isSamedayCancel は将来的に件名差し替え等に使える。現状ログのみ。
+  if (isSamedayCancel) {
+    console.log("当日キャンセル通知送信:", schedule.id, cancellerUserId);
+  }
 }

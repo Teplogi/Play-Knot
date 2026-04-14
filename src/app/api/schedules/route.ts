@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  notifyScheduleCreated,
+  notifyScheduleChanged,
+} from "@/lib/email/notify";
 
 // 日程作成（ホストのみ。RLS ポリシーで is_team_host チェック）
 export async function POST(request: Request) {
@@ -52,6 +56,27 @@ export async function POST(request: Request) {
       console.error("schedules POST creator attendance insert error:", attErr);
     }
 
+    // 日程追加通知（非同期・失敗してもレスポンスに影響しない）
+    const { data: teamRow } = await supabase
+      .from("teams")
+      .select("id, name")
+      .eq("id", teamId)
+      .single();
+    if (teamRow) {
+      notifyScheduleCreated(
+        supabase,
+        {
+          id: schedule.id,
+          team_id: teamId,
+          date: schedule.date,
+          location: schedule.location,
+          note: schedule.note,
+        },
+        teamRow,
+        user.id
+      ).catch((err) => console.error("日程追加通知エラー:", err));
+    }
+
     return NextResponse.json(schedule);
   } catch (e) {
     console.error("schedules POST server error:", e);
@@ -81,7 +106,7 @@ export async function PUT(request: Request) {
         deadline: deadline || null,
       })
       .eq("id", scheduleId)
-      .select()
+      .select("id, team_id, date, location, note")
       .single();
 
     if (error) {
@@ -90,6 +115,18 @@ export async function PUT(request: Request) {
       return NextResponse.json(
         { error: error.code === "42501" ? "ホスト権限が必要です" : "日程の更新に失敗しました", detail: error.message },
         { status }
+      );
+    }
+
+    // 変更通知
+    const { data: teamRow } = await supabase
+      .from("teams")
+      .select("id, name")
+      .eq("id", schedule.team_id)
+      .single();
+    if (teamRow) {
+      notifyScheduleChanged(supabase, schedule, teamRow, "updated", user.id).catch(
+        (err) => console.error("日程変更通知エラー:", err)
       );
     }
 
@@ -111,6 +148,13 @@ export async function DELETE(request: Request) {
 
     const { scheduleId } = await request.json();
 
+    // 削除前にスナップショットを取る（メール本文に日時/場所を含めるため）
+    const { data: snapshot } = await supabase
+      .from("schedules")
+      .select("id, team_id, date, location, note, teams(id, name)")
+      .eq("id", scheduleId)
+      .single();
+
     const { error } = await supabase
       .from("schedules")
       .delete()
@@ -123,6 +167,25 @@ export async function DELETE(request: Request) {
         { error: error.code === "42501" ? "ホスト権限が必要です" : "日程の削除に失敗しました", detail: error.message },
         { status }
       );
+    }
+
+    if (snapshot) {
+      const team = snapshot.teams as unknown as { id: string; name: string } | null;
+      if (team) {
+        notifyScheduleChanged(
+          supabase,
+          {
+            id: snapshot.id,
+            team_id: snapshot.team_id,
+            date: snapshot.date,
+            location: snapshot.location,
+            note: snapshot.note,
+          },
+          team,
+          "deleted",
+          user.id
+        ).catch((err) => console.error("日程削除通知エラー:", err));
+      }
     }
 
     return NextResponse.json({ success: true });

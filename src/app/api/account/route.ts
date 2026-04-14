@@ -10,11 +10,27 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const { name, gender, birth_year, position } = await request.json();
+    const { name, gender, birth_year, position, notification_email } = await request.json();
+
+    // 簡易バリデーション: 空文字は NULL として扱う
+    let notif: string | null | undefined = undefined;
+    if (notification_email !== undefined) {
+      const trimmed = typeof notification_email === "string" ? notification_email.trim() : "";
+      if (trimmed === "") {
+        notif = null;
+      } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+        return NextResponse.json({ error: "メールアドレスの形式が不正です" }, { status: 400 });
+      } else {
+        notif = trimmed;
+      }
+    }
+
+    const update: Record<string, unknown> = { name, gender, birth_year, position };
+    if (notif !== undefined) update.notification_email = notif;
 
     const { error } = await supabase
       .from("users")
-      .update({ name, gender, birth_year, position })
+      .update(update)
       .eq("id", user.id);
 
     if (error) {
