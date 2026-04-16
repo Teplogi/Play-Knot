@@ -311,7 +311,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
       if (!res.ok) throw new Error();
       toast.success("通知設定を保存しました");
     } catch {
-      toast.success("通知設定を保存しました");
+      toast.error("通知設定の保存に失敗しました");
     } finally {
       setNotifSaving(false);
     }
@@ -510,6 +510,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
             gender: account.gender,
             birth_year: account.birthYear,
             position: account.position,
+            notification_email: account.notificationEmail,
           }),
         }),
       ),
