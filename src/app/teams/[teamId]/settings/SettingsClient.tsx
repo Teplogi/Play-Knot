@@ -216,7 +216,7 @@ function Toggle({
 
 function NgPinGate({ teamId }: { teamId: string }) {
   const router = useRouter();
-  const [phase, setPhase] = useState<"loading" | "setup" | "verify" | "reset-sent">("loading");
+  const [phase, setPhase] = useState<"loading" | "setup" | "verify" | "reset-confirm" | "reset-sent">("loading");
   const [pin, setPin] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [setupPin, setSetupPin] = useState("");
@@ -360,6 +360,33 @@ function NgPinGate({ teamId }: { teamId: string }) {
     );
   }
 
+  if (phase === "reset-confirm") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-100">
+          <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+          <p className="text-xs text-amber-700">
+            登録メールアドレスにPINリセットリンクを送信します。リンクの有効期限は30分です。
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button onClick={handleResetRequest} disabled={sending} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">
+            {sending ? "送信中..." : "リセットメールを送信"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => { setPhase("verify"); setPin(""); }}
+            className="text-xs text-gray-500 hover:text-gray-700 underline"
+          >
+            戻る
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // phase === "verify"
   return (
     <div className="space-y-4">
@@ -383,11 +410,10 @@ function NgPinGate({ teamId }: { teamId: string }) {
         </Button>
         <button
           type="button"
-          onClick={handleResetRequest}
-          disabled={sending}
+          onClick={() => setPhase("reset-confirm")}
           className="text-xs text-gray-500 hover:text-indigo-600 underline"
         >
-          {sending ? "送信中..." : "PINを忘れた方"}
+          PINを忘れた方
         </button>
       </div>
     </div>
