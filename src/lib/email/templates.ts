@@ -186,6 +186,25 @@ export function deadlineTemplate(
   return { subject, html };
 }
 
+// PINリセット
+export function pinResetTemplate(params: {
+  teamName: string;
+  teamId: string;
+  token: string;
+}) {
+  const resetUrl = `${APP_URL}/teams/${params.teamId}/ng-list/reset-pin?token=${params.token}`;
+  const subject = `【${params.teamName}】NGリスト PIN リセット`;
+  const html = layout({
+    accent: "#7c3aed",
+    heading: "PIN リセットのご案内",
+    lead: "以下のボタンから新しい PIN を設定してください。このリンクは 30 分間有効です。",
+    cells: [{ label: "チーム", value: params.teamName }],
+    ctaLabel: "PIN を再設定する",
+    ctaUrl: resetUrl,
+  });
+  return { subject, html };
+}
+
 // 再募集通知
 export function reopenedTemplate(params: BaseParams) {
   const dateStr = formatDateTime(params.scheduleDate);
