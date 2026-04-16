@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -210,6 +210,186 @@ function Toggle({
         </div>
       </label>
       {checked && children && <div className="pl-14 mt-2">{children}</div>}
+    </div>
+  );
+}
+
+function NgPinGate({ teamId }: { teamId: string }) {
+  const router = useRouter();
+  const [phase, setPhase] = useState<"loading" | "setup" | "verify" | "reset-sent">("loading");
+  const [pin, setPin] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [setupPin, setSetupPin] = useState("");
+  const [setupConfirm, setSetupConfirm] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const checkHasPin = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/ng-passcode?teamId=${teamId}`);
+      const data = await res.json();
+      setPhase(data.hasPin ? "verify" : "setup");
+    } catch {
+      setPhase("setup");
+    }
+  }, [teamId]);
+
+  useEffect(() => { checkHasPin(); }, [checkHasPin]);
+
+  const handleSetup = async () => {
+    if (setupPin.length !== 4 || !/^\d{4}$/.test(setupPin)) {
+      toast.error("4桁の数字を入力してください");
+      return;
+    }
+    if (setupPin !== setupConfirm) {
+      toast.error("PINが一致しません");
+      return;
+    }
+    setConfirming(true);
+    try {
+      const res = await fetch("/api/ng-passcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, action: "setup", pin: setupPin }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "設定に失敗しました");
+      }
+      toast.success("PINを設定しました");
+      router.push(`/teams/${teamId}/ng-list`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "PINの設定に失敗しました");
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const handleVerify = async () => {
+    if (pin.length !== 4) return;
+    setConfirming(true);
+    try {
+      const res = await fetch("/api/ng-passcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, action: "verify", pin }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "認証に失敗しました");
+      }
+      router.push(`/teams/${teamId}/ng-list`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "PINが正しくありません");
+      setPin("");
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const handleResetRequest = async () => {
+    setSending(true);
+    try {
+      const res = await fetch("/api/ng-passcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, action: "reset-request" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "送信に失敗しました");
+      }
+      setPhase("reset-sent");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "リセットメールの送信に失敗しました");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (phase === "loading") {
+    return <p className="text-sm text-gray-500">読み込み中...</p>;
+  }
+
+  if (phase === "reset-sent") {
+    return (
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-100">
+        <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p className="text-xs text-green-700">リセットリンクをメールで送信しました。30分以内にメールのリンクからPINを再設定してください。</p>
+      </div>
+    );
+  }
+
+  if (phase === "setup") {
+    return (
+      <div className="space-y-4">
+        <p className="text-xs text-gray-500">NGリストに初めてアクセスします。4桁のPINを設定してください。</p>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="ng-pin-setup">PIN (4桁の数字)</Label>
+            <Input
+              id="ng-pin-setup"
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={setupPin}
+              onChange={(e) => setSetupPin(e.target.value.replace(/\D/g, ""))}
+              placeholder="****"
+              className="w-32 text-center tracking-[0.5em]"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="ng-pin-confirm">PIN (確認)</Label>
+            <Input
+              id="ng-pin-confirm"
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={setupConfirm}
+              onChange={(e) => setSetupConfirm(e.target.value.replace(/\D/g, ""))}
+              placeholder="****"
+              className="w-32 text-center tracking-[0.5em]"
+            />
+          </div>
+        </div>
+        <Button onClick={handleSetup} disabled={confirming || setupPin.length !== 4 || setupConfirm.length !== 4} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">
+          {confirming ? "設定中..." : "PINを設定してNGリストを開く"}
+        </Button>
+      </div>
+    );
+  }
+
+  // phase === "verify"
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <Label htmlFor="ng-pin-input">PIN (4桁)</Label>
+        <Input
+          id="ng-pin-input"
+          type="password"
+          inputMode="numeric"
+          maxLength={4}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+          onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 4) handleVerify(); }}
+          placeholder="****"
+          className="w-32 text-center tracking-[0.5em]"
+        />
+      </div>
+      <div className="flex items-center gap-3">
+        <Button onClick={handleVerify} disabled={confirming || pin.length !== 4} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">
+          {confirming ? "確認中..." : "NGリストを開く"}
+        </Button>
+        <button
+          type="button"
+          onClick={handleResetRequest}
+          disabled={sending}
+          className="text-xs text-gray-500 hover:text-indigo-600 underline"
+        >
+          {sending ? "送信中..." : "PINを忘れた方"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -1111,6 +1291,13 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
             <Button onClick={saveDivideDefaults} disabled={divideSaving} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">{divideSaving ? "保存中..." : "保存"}</Button>
           </div>
         </div>
+      </Section>
+      )}
+
+      {/* NGリスト管理（ホスト・共同ホストのみ） */}
+      {isHostOrCoHost && (
+      <Section title="NGリスト管理" description="NGペアの確認・編集にはPINが必要です">
+        <NgPinGate teamId={teamId} />
       </Section>
       )}
 

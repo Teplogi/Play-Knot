@@ -24,7 +24,6 @@ function getNavItems(teamId: string, role: TeamRole) {
     ...(isHostOrCoHost
       ? [
           { href: `/teams/${teamId}/members`, label: "メンバー", icon: "users" },
-          { href: `/teams/${teamId}/ng-list`, label: "NGリスト", icon: "shield" },
           { href: `/teams/${teamId}/attendance`, label: "出席率", icon: "chart" },
         ]
       : []),
