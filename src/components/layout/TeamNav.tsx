@@ -85,15 +85,21 @@ export function TeamNav({ teamId, teamName, role }: TeamNavProps) {
     };
   }, [menuOpen]);
 
+  // チームホームにいるかどうか (サブパス無し = ホーム)
+  const teamHome = `/teams/${teamId}`;
+  const isOnTeamHome = pathname === teamHome || pathname === `${teamHome}/`;
+  const backHref = isOnTeamHome ? "/teams" : teamHome;
+  const backLabel = isOnTeamHome ? "チーム一覧" : "チームホーム";
+
   return (
     <>
       {/* デスクトップ：サイドバー */}
       <aside className="hidden md:flex md:flex-col md:w-60 md:fixed md:inset-y-0 bg-white border-r border-gray-200 z-20">
         {/* ロゴ & チーム名 */}
         <div className="p-4 border-b border-gray-100">
-          <Link href="/teams" className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors mb-2">
+          <Link href={backHref} className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors mb-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
-            チーム一覧
+            {backLabel}
           </Link>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
@@ -144,7 +150,7 @@ export function TeamNav({ teamId, teamName, role }: TeamNavProps) {
       <header className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-200">
         <div className="flex items-center justify-between px-4 h-12">
           <div className="flex items-center gap-2 min-w-0">
-            <Link href="/teams" className="text-gray-400 hover:text-gray-600 flex-shrink-0" aria-label="チーム一覧へ戻る">
+            <Link href={backHref} className="text-gray-400 hover:text-gray-600 flex-shrink-0" aria-label={`${backLabel}へ戻る`}>
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
             </Link>
             <div className="w-6 h-6 rounded bg-indigo-600 flex items-center justify-center flex-shrink-0">
