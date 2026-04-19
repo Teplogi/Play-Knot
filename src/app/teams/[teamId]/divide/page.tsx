@@ -26,7 +26,7 @@ export default async function DividePage({
   const supabase = await createClient();
 
   const todayStart = startOfTodayJSTAsUTC();
-  const [membership, rawMembersRes, futureSchedulesRes, rawNgPairsRes] = await Promise.all([
+  const [membership, rawMembersRes, futureSchedulesRes, rawNgPairsRes, teamSettingsRes] = await Promise.all([
     getTeamMembership(teamId),
     supabase
       .from("team_members")
@@ -39,7 +39,18 @@ export default async function DividePage({
       .gte("date", todayStart)
       .order("date", { ascending: true }),
     supabase.from("ng_pairs").select("*").eq("team_id", teamId),
+    supabase
+      .from("team_settings")
+      .select("default_divide_by, default_divide_value, default_divide_method")
+      .eq("team_id", teamId)
+      .single(),
   ]);
+
+  const defaults = {
+    divideBy: (teamSettingsRes.data?.default_divide_by as "team_count" | "members_per_team") ?? "team_count",
+    divideValue: teamSettingsRes.data?.default_divide_value ?? 2,
+    divideMethod: (teamSettingsRes.data?.default_divide_method as "random" | "gender_equal") ?? "random",
+  };
 
   const isHost = hasHostPrivilege(membership?.role ?? "guest");
 
@@ -68,6 +79,7 @@ export default async function DividePage({
       futureSchedules={futureSchedules}
       ngPairs={(rawNgPairsRes.data ?? []) as NgPair[]}
       isHost={isHost}
+      defaults={defaults}
     />
   );
 }

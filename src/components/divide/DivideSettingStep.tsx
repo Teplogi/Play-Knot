@@ -4,8 +4,15 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+type DivideSettingDefaults = {
+  divideBy: "team_count" | "members_per_team";
+  divideValue: number;
+  divideMethod: "random" | "gender_equal";
+};
+
 type DivideSettingStepProps = {
   memberCount: number;
+  defaults?: DivideSettingDefaults;
   onChange: (settings: DivideSettings | null) => void;
 };
 
@@ -15,10 +22,10 @@ export type DivideSettings = {
   method: "random" | "gender_equal";
 };
 
-export function DivideSettingStep({ memberCount, onChange }: DivideSettingStepProps) {
-  const [divideBy, setDivideBy] = useState<"team_count" | "members_per_team">("team_count");
-  const [rawValue, setRawValue] = useState("2");
-  const [method, setMethod] = useState<"random" | "gender_equal">("random");
+export function DivideSettingStep({ memberCount, defaults, onChange }: DivideSettingStepProps) {
+  const [divideBy, setDivideBy] = useState<"team_count" | "members_per_team">(defaults?.divideBy ?? "team_count");
+  const [rawValue, setRawValue] = useState(String(defaults?.divideValue ?? 2));
+  const [method, setMethod] = useState<"random" | "gender_equal">(defaults?.divideMethod ?? "random");
 
   const numericValue = rawValue === "" ? null : parseInt(rawValue, 10);
 

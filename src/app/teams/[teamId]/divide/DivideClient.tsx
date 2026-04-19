@@ -15,11 +15,18 @@ export type FutureSchedule = {
   attendingIds: string[];
 };
 
+type DivideDefaults = {
+  divideBy: "team_count" | "members_per_team";
+  divideValue: number;
+  divideMethod: "random" | "gender_equal";
+};
+
 type DivideClientProps = {
   registeredMembers: Member[];
   futureSchedules: FutureSchedule[];
   ngPairs: NgPair[];
   isHost: boolean;
+  defaults: DivideDefaults;
 };
 
 type Committed = {
@@ -28,7 +35,7 @@ type Committed = {
   version: number; // 再抽選で bump
 };
 
-export function DivideClient({ registeredMembers, futureSchedules, ngPairs }: DivideClientProps) {
+export function DivideClient({ registeredMembers, futureSchedules, ngPairs, defaults }: DivideClientProps) {
   // 編集中（まだ実行していない）状態
   const [selectedMembers, setSelectedMembers] = useState<Member[]>(registeredMembers);
   const [savedSelectedIds, setSavedSelectedIds] = useState<Set<string> | null>(null);
@@ -89,6 +96,7 @@ export function DivideClient({ registeredMembers, futureSchedules, ngPairs }: Di
       <section>
         <DivideSettingStep
           memberCount={selectedMembers.length}
+          defaults={defaults}
           onChange={(s) => setSettings(s)}
         />
       </section>
