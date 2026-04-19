@@ -61,7 +61,7 @@ export default function ResetPinPage() {
             </svg>
           </div>
           <h2 className="font-bold text-gray-900">PIN を再設定しました</h2>
-          <p className="text-sm text-gray-500">設定画面に戻り、新しい PIN で NGリストにアクセスしてください。</p>
+          <p className="text-sm text-gray-500">設定画面に戻り、新しい PIN でチーム分け条件にアクセスしてください。</p>
           <Button onClick={() => window.location.href = `/teams/${teamId}/settings`} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 w-full">
             設定画面に戻る
           </Button>
@@ -74,7 +74,7 @@ export default function ResetPinPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 max-w-sm w-full space-y-5">
         <div>
-          <h2 className="font-bold text-gray-900">NGリスト PIN 再設定</h2>
+          <h2 className="font-bold text-gray-900">チーム分け条件 PIN 再設定</h2>
           <p className="text-xs text-gray-500 mt-1">新しい4桁のPINを設定してください。</p>
         </div>
 

@@ -33,7 +33,7 @@ export async function DELETE(
       .eq("id", pairId)
       .eq("team_id", teamId);
 
-    if (error) return NextResponse.json({ error: "NGペアの削除に失敗しました" }, { status: 500 });
+    if (error) return NextResponse.json({ error: "ペアの削除に失敗しました" }, { status: 500 });
 
     return NextResponse.json({ success: true });
   } catch {

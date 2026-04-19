@@ -24,7 +24,7 @@ export function NgListClient({ teamId, initialPairs, members }: NgListClientProp
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">NGリスト管理</h2>
+          <h2 className="text-xl font-bold">チーム分け条件</h2>
           <p className="text-sm text-muted-foreground">
             チーム分け時に同じチームにならないペアを設定します（{initialPairs.length}件）
           </p>

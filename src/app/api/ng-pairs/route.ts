@@ -32,7 +32,7 @@ export async function GET(request: Request) {
       .eq("team_id", teamId)
       .order("created_at", { ascending: false });
 
-    if (error) return NextResponse.json({ error: "NGリストの取得に失敗しました" }, { status: 500 });
+    if (error) return NextResponse.json({ error: "チーム分け条件の取得に失敗しました" }, { status: 500 });
 
     return NextResponse.json(pairs);
   } catch {
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: "NGペアの追加に失敗しました" }, { status: 500 });
+    if (error) return NextResponse.json({ error: "ペアの追加に失敗しました" }, { status: 500 });
 
     return NextResponse.json(pair);
   } catch {

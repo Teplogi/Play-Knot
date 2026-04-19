@@ -25,7 +25,7 @@ export function NgPairList({ pairs, teamId, onDeleted }: NgPairListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleDelete = async (pair: NgPairWithUsers) => {
-    if (!confirm(`${pair.user_a.name} × ${pair.user_b.name} のNGペアを削除しますか？`)) return;
+    if (!confirm(`${pair.user_a.name} × ${pair.user_b.name} のペアを削除しますか？`)) return;
     setDeletingId(pair.id);
     try {
       const res = await fetch(`/api/ng-pairs/${pair.id}`, {
@@ -40,7 +40,7 @@ export function NgPairList({ pairs, teamId, onDeleted }: NgPairListProps) {
         return;
       }
 
-      toast.success("NGペアを削除しました");
+      toast.success("ペアを削除しました");
       onDeleted();
     } catch {
       toast.error("エラーが発生しました");
@@ -52,7 +52,7 @@ export function NgPairList({ pairs, teamId, onDeleted }: NgPairListProps) {
   if (pairs.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        NGペアが登録されていません
+        ペアが登録されていません
       </div>
     );
   }

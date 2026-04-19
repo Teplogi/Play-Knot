@@ -58,7 +58,7 @@ export function NgPairForm({ teamId, members, onAdded }: NgPairFormProps) {
         return;
       }
 
-      toast.success("NGペアを追加しました");
+      toast.success("ペアを追加しました");
       setOpen(false);
       setUserIdA("");
       setUserIdB("");
@@ -73,11 +73,11 @@ export function NgPairForm({ teamId, members, onAdded }: NgPairFormProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button />}>
-        + NG組み合わせを追加
+        + ペアを追加
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>NG組み合わせを追加</DialogTitle>
+          <DialogTitle>ペアを追加</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

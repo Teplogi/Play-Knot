@@ -193,7 +193,7 @@ export function pinResetTemplate(params: {
   token: string;
 }) {
   const resetUrl = `${APP_URL}/teams/${params.teamId}/ng-list/reset-pin?token=${params.token}`;
-  const subject = `【${params.teamName}】NGリスト PIN リセット`;
+  const subject = `【${params.teamName}】チーム分け条件 PIN リセット`;
   const html = layout({
     accent: "#7c3aed",
     heading: "PIN リセットのご案内",

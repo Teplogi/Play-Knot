@@ -324,7 +324,7 @@ function NgPinGate({ teamId }: { teamId: string }) {
   if (phase === "setup") {
     return (
       <div className="space-y-4">
-        <p className="text-xs text-gray-500">NGリストに初めてアクセスします。4桁のPINを設定してください。</p>
+        <p className="text-xs text-gray-500">チーム分け条件に初めてアクセスします。4桁のPINを設定してください。</p>
         <div className="space-y-3">
           <div className="space-y-1">
             <Label htmlFor="ng-pin-setup">PIN (4桁の数字)</Label>
@@ -354,7 +354,7 @@ function NgPinGate({ teamId }: { teamId: string }) {
           </div>
         </div>
         <Button onClick={handleSetup} disabled={confirming || setupPin.length !== 4 || setupConfirm.length !== 4} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">
-          {confirming ? "設定中..." : "PINを設定してNGリストを開く"}
+          {confirming ? "設定中..." : "PINを設定してチーム分け条件を開く"}
         </Button>
       </div>
     );
@@ -406,7 +406,7 @@ function NgPinGate({ teamId }: { teamId: string }) {
       </div>
       <div className="flex items-center gap-3">
         <Button onClick={handleVerify} disabled={confirming || pin.length !== 4} className="rounded-lg bg-indigo-600 hover:bg-indigo-700">
-          {confirming ? "確認中..." : "NGリストを開く"}
+          {confirming ? "確認中..." : "チーム分け条件を開く"}
         </Button>
         <button
           type="button"
@@ -1320,9 +1320,9 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
       </Section>
       )}
 
-      {/* NGリスト管理（ホスト・共同ホストのみ） */}
+      {/* チーム分け条件（ホスト・共同ホストのみ） */}
       {isHostOrCoHost && (
-      <Section title="NGリスト管理" description="NGペアの確認・編集にはPINが必要です">
+      <Section title="チーム分け条件" description="ペアの確認・編集にはPINが必要です">
         <NgPinGate teamId={teamId} />
       </Section>
       )}
@@ -1348,7 +1348,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 rounded-lg border border-red-200 bg-red-50/50">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900">チームを削除</p>
-              <p className="text-xs text-gray-500 mt-0.5">チーム・メンバー・日程・出欠・NGリストが全て削除されます</p>
+              <p className="text-xs text-gray-500 mt-0.5">チーム・メンバー・日程・出欠・チーム分け条件が全て削除されます</p>
             </div>
             <Button
               variant="outline"
