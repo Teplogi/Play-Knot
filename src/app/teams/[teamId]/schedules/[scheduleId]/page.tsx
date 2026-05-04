@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser, getTeamMembership } from "@/lib/auth";
 import { ScheduleDetailClient } from "./ScheduleDetailClient";
-import { hasHostPrivilege } from "@/types";
+import { hasHostPrivilege, type ScheduleGuestWithGuest, type TeamGuest } from "@/types";
 
 export default async function ScheduleDetailPage({
   params,
@@ -13,11 +13,20 @@ export default async function ScheduleDetailPage({
   const user = await requireUser();
   const supabase = await createClient();
 
-  const [membership, scheduleRes, totalMembersRes, teamSettingsRes] = await Promise.all([
+  const [
+    membership,
+    scheduleRes,
+    totalMembersRes,
+    teamSettingsRes,
+    invitedGuestsRes,
+    teamGuestsRes,
+  ] = await Promise.all([
     getTeamMembership(teamId),
     supabase
       .from("schedules")
-      .select("*, attendances(id, schedule_id, user_id, status, comment, updated_at, created_at, users(id, name, email, gender, birth_year, position, created_at))")
+      .select(
+        "*, attendances(id, schedule_id, user_id, status, comment, updated_at, created_at, users(id, name, email, gender, birth_year, position, created_at))"
+      )
       .eq("id", scheduleId)
       .single(),
     supabase
@@ -29,6 +38,16 @@ export default async function ScheduleDetailPage({
       .select("allow_tentative")
       .eq("team_id", teamId)
       .single(),
+    supabase
+      .from("schedule_guests")
+      .select("*, team_guests(*)")
+      .eq("schedule_id", scheduleId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("team_guests")
+      .select("*")
+      .eq("team_id", teamId)
+      .order("created_at", { ascending: true }),
   ]);
 
   const schedule = scheduleRes.data;
@@ -38,10 +57,8 @@ export default async function ScheduleDetailPage({
   const totalMembers = totalMembersRes.count;
   const allowTentative = teamSettingsRes.data?.allow_tentative ?? false;
 
-  // 自分の出欠
-  const myAttendance = schedule.attendances?.find(
-    (a: { user_id: string }) => a.user_id === user.id
-  ) ?? null;
+  const myAttendance =
+    schedule.attendances?.find((a: { user_id: string }) => a.user_id === user.id) ?? null;
 
   return (
     <ScheduleDetailClient
@@ -52,6 +69,8 @@ export default async function ScheduleDetailPage({
       canManageSchedule={canManageSchedule}
       teamId={teamId}
       allowTentative={allowTentative}
+      invitedGuests={(invitedGuestsRes.data ?? []) as ScheduleGuestWithGuest[]}
+      teamGuests={(teamGuestsRes.data ?? []) as TeamGuest[]}
     />
   );
 }

@@ -6,13 +6,15 @@ import { DivideSettingStep, type DivideSettings } from "@/components/divide/Divi
 import { DivideResultStep } from "@/components/divide/DivideResultStep";
 import { divideTeams, calcTeamCount, type Member } from "@/lib/divide/algorithm";
 import { Button } from "@/components/ui/button";
-import type { NgPair } from "@/types";
+import type { NgPair, TeamGuest } from "@/types";
 
 export type FutureSchedule = {
   id: string;
   date: string;
   location: string | null;
   attendingIds: string[];
+  /** この日程に招集されている team_guests.id 一覧 */
+  invitedGuestIds: string[];
 };
 
 type DivideDefaults = {
@@ -23,6 +25,7 @@ type DivideDefaults = {
 
 type DivideClientProps = {
   registeredMembers: Member[];
+  teamGuests: TeamGuest[];
   futureSchedules: FutureSchedule[];
   ngPairs: NgPair[];
   isHost: boolean;
@@ -35,11 +38,30 @@ type Committed = {
   version: number; // 再抽選で bump
 };
 
-export function DivideClient({ registeredMembers, futureSchedules, ngPairs, defaults }: DivideClientProps) {
+export function DivideClient({
+  registeredMembers,
+  teamGuests,
+  futureSchedules,
+  ngPairs,
+  defaults,
+}: DivideClientProps) {
+  // team_guests を Member 形に正規化（id は guest UUID をそのまま使用）。
+  // ng_pairs は users.id 参照なので、guest id は filterNgPairsForMembers で
+  // 自然に弾かれる（NG 判定対象外として扱われる）。
+  const guestMembers: Member[] = useMemo(
+    () =>
+      teamGuests.map((g) => ({
+        id: g.id,
+        name: g.name,
+        gender: g.gender,
+        isDummy: true,
+      })),
+    [teamGuests]
+  );
+
   // 編集中（まだ実行していない）状態
   const [selectedMembers, setSelectedMembers] = useState<Member[]>(registeredMembers);
   const [savedSelectedIds, setSavedSelectedIds] = useState<Set<string> | null>(null);
-  const [savedDummies, setSavedDummies] = useState<Member[]>([]);
   const [settings, setSettings] = useState<DivideSettings | null>(null);
 
   // 実行時点で確定したスナップショット
@@ -50,15 +72,18 @@ export function DivideClient({ registeredMembers, futureSchedules, ngPairs, defa
   const result = useMemo(() => {
     if (!committed) return null;
     const { members, settings: s } = committed;
-    const teamCount = s.divideBy === "team_count"
-      ? s.value
-      : calcTeamCount(members.length, s.value);
+    const teamCount =
+      s.divideBy === "team_count" ? s.value : calcTeamCount(members.length, s.value);
     return divideTeams(members, teamCount, s.method, ngPairs);
   }, [committed, ngPairs]);
 
   const execute = () => {
     if (!canExecute || !settings) return;
-    setCommitted({ members: selectedMembers, settings, version: (committed?.version ?? 0) + 1 });
+    setCommitted({
+      members: selectedMembers,
+      settings,
+      version: (committed?.version ?? 0) + 1,
+    });
   };
 
   const reshuffle = () => {
@@ -66,7 +91,6 @@ export function DivideClient({ registeredMembers, futureSchedules, ngPairs, defa
     setCommitted({ ...committed, version: committed.version + 1 });
   };
 
-  // 実行後に編集があったかどうか（結果が古くなっているか）
   const isStale =
     committed !== null &&
     (committed.members !== selectedMembers || committed.settings !== settings);
@@ -79,13 +103,12 @@ export function DivideClient({ registeredMembers, futureSchedules, ngPairs, defa
       <section>
         <MemberSelectStep
           registeredMembers={registeredMembers}
+          guestMembers={guestMembers}
           futureSchedules={futureSchedules}
           initialSelectedIds={savedSelectedIds}
-          initialDummies={savedDummies}
-          onChange={(members, selectedIds, dummies) => {
+          onChange={(members, selectedIds) => {
             setSelectedMembers(members);
             setSavedSelectedIds(selectedIds);
-            setSavedDummies(dummies);
           }}
         />
       </section>
@@ -125,7 +148,9 @@ export function DivideClient({ registeredMembers, futureSchedules, ngPairs, defa
       <section className="space-y-4">
         <h3 className="font-semibold text-gray-900">チーム分け結果</h3>
         {!result ? (
-          <p className="text-sm text-gray-500">「チーム分けを実行」を押すとここに結果が表示されます。</p>
+          <p className="text-sm text-gray-500">
+            「チーム分けを実行」を押すとここに結果が表示されます。
+          </p>
         ) : (
           <DivideResultStep
             key={committed?.version}

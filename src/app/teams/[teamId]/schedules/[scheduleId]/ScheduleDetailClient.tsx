@@ -9,7 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { AttendanceForm } from "@/components/attendance/AttendanceForm";
 import { AttendanceList } from "@/components/attendance/AttendanceList";
 import { EditScheduleDialog } from "@/components/schedule/EditScheduleDialog";
-import type { Schedule, AttendanceWithUser } from "@/types";
+import { ScheduleGuestsSection } from "@/components/guests/ScheduleGuestsSection";
+import type {
+  Schedule,
+  AttendanceWithUser,
+  ScheduleGuestWithGuest,
+  TeamGuest,
+} from "@/types";
 
 type Props = {
   schedule: Schedule;
@@ -19,6 +25,8 @@ type Props = {
   canManageSchedule: boolean;
   teamId: string;
   allowTentative: boolean;
+  invitedGuests: ScheduleGuestWithGuest[];
+  teamGuests: TeamGuest[];
 };
 
 export function ScheduleDetailClient({
@@ -29,12 +37,19 @@ export function ScheduleDetailClient({
   canManageSchedule,
   teamId,
   allowTentative,
+  invitedGuests,
+  teamGuests,
 }: Props) {
   const router = useRouter();
 
-  const attendCount = attendances.filter((a) => a.status === "attend").length;
+  const memberAttendCount = attendances.filter((a) => a.status === "attend").length;
+  const guestAttendCount = invitedGuests.length;
+  const attendCount = memberAttendCount + guestAttendCount;
+
   const myUserId = myAttendance?.user_id ?? null;
-  const othersAttendCount = attendances.filter((a) => a.status === "attend" && a.user_id !== myUserId).length;
+  const othersAttendCount =
+    attendances.filter((a) => a.status === "attend" && a.user_id !== myUserId).length +
+    guestAttendCount;
   const isFull = schedule.capacity !== null && attendCount >= schedule.capacity;
 
   return (
@@ -56,7 +71,10 @@ export function ScheduleDetailClient({
           <CardTitle>
             {format(new Date(schedule.date), "yyyy年M月d日(E) HH:mm", { locale: ja })}
             {schedule.end_date && (
-              <span className="text-muted-foreground font-normal"> 〜 {format(new Date(schedule.end_date), "HH:mm", { locale: ja })}</span>
+              <span className="text-muted-foreground font-normal">
+                {" "}
+                〜 {format(new Date(schedule.end_date), "HH:mm", { locale: ja })}
+              </span>
             )}
           </CardTitle>
         </CardHeader>
@@ -83,7 +101,9 @@ export function ScheduleDetailClient({
           {schedule.deadline && (
             <div className="flex gap-2">
               <span className="text-muted-foreground text-sm w-12">締切</span>
-              <span className="text-sm">{format(new Date(schedule.deadline), "M/d(E) HH:mm", { locale: ja })}</span>
+              <span className="text-sm">
+                {format(new Date(schedule.deadline), "M/d(E) HH:mm", { locale: ja })}
+              </span>
             </div>
           )}
           {schedule.note && (
@@ -115,12 +135,29 @@ export function ScheduleDetailClient({
         </CardContent>
       </Card>
 
+      {/* ゲスト招集 */}
+      <Card>
+        <CardContent className="pt-6">
+          <ScheduleGuestsSection
+            scheduleId={schedule.id}
+            invitedGuests={invitedGuests}
+            teamGuests={teamGuests}
+            canManage={canManageSchedule}
+            onUpdated={() => router.refresh()}
+          />
+        </CardContent>
+      </Card>
+
       <Separator />
 
       {/* 出欠一覧 */}
       <div>
         <h3 className="text-lg font-semibold mb-4">出欠一覧</h3>
-        <AttendanceList attendances={attendances} totalMembers={totalMembers} />
+        <AttendanceList
+          attendances={attendances}
+          totalMembers={totalMembers}
+          invitedGuests={invitedGuests}
+        />
       </div>
     </div>
   );

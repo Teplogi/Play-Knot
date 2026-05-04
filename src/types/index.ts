@@ -78,6 +78,31 @@ export type Attendance = {
   created_at: string;
 };
 
+// 助っ人プール（public.team_guests テーブルに対応）
+// auth ユーザを持たない、ホスト/共同ホスト管理のチーム単位ゲスト一覧
+export type TeamGuest = {
+  id: string;
+  team_id: string;
+  name: string;
+  gender: "男" | "女" | "未設定";
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// 日程ごとの招集ゲスト（public.schedule_guests テーブルに対応）
+export type ScheduleGuest = {
+  id: string;
+  schedule_id: string;
+  guest_id: string;
+  invited_by: string | null;
+  created_at: string;
+};
+
+export type ScheduleGuestWithGuest = ScheduleGuest & {
+  team_guests: TeamGuest;
+};
+
 // NGペア（public.ng_pairsテーブルに対応・ホスト専用・ゲストには非表示）
 export type NgPair = {
   id: string;
