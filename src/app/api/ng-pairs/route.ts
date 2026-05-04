@@ -70,10 +70,26 @@ export async function POST(request: Request) {
       .eq("team_id", teamId)
       .eq("user_id_a", sortedA)
       .eq("user_id_b", sortedB)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return NextResponse.json({ error: "この組み合わせは既に登録されています" }, { status: 409 });
+    }
+
+    // 「必ずペア」と矛盾していないか
+    const { data: mustExisting } = await supabase
+      .from("must_pairs")
+      .select("id")
+      .eq("team_id", teamId)
+      .eq("user_id_a", sortedA)
+      .eq("user_id_b", sortedB)
+      .maybeSingle();
+
+    if (mustExisting) {
+      return NextResponse.json(
+        { error: "このペアは「必ず同じチーム」にも登録されています。先に解除してください" },
+        { status: 409 }
+      );
     }
 
     const { data: pair, error } = await supabase
