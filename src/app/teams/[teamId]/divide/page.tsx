@@ -3,7 +3,7 @@ import { requireUser, getTeamMembership } from "@/lib/auth";
 import { DivideClient, type FutureSchedule } from "./DivideClient";
 import { hasHostPrivilege } from "@/types";
 import type { Member } from "@/lib/divide/algorithm";
-import type { NgPair, TeamGuest } from "@/types";
+import type { MustPair, NgPair, TeamGuest } from "@/types";
 
 // Vercel サーバは UTC のため、JST の「今日 00:00」を UTC ISO で返す
 function startOfTodayJSTAsUTC(): string {
@@ -31,6 +31,7 @@ export default async function DividePage({
     rawMembersRes,
     futureSchedulesRes,
     rawNgPairsRes,
+    rawMustPairsRes,
     teamSettingsRes,
     teamGuestsRes,
   ] = await Promise.all([
@@ -48,6 +49,7 @@ export default async function DividePage({
       .gte("date", todayStart)
       .order("date", { ascending: true }),
     supabase.from("ng_pairs").select("*").eq("team_id", teamId),
+    supabase.from("must_pairs").select("*").eq("team_id", teamId),
     supabase
       .from("team_settings")
       .select("default_divide_by, default_divide_value, default_divide_method")
@@ -102,6 +104,7 @@ export default async function DividePage({
       teamGuests={teamGuests}
       futureSchedules={futureSchedules}
       ngPairs={(rawNgPairsRes.data ?? []) as NgPair[]}
+      mustPairs={(rawMustPairsRes.data ?? []) as MustPair[]}
       isHost={isHost}
       defaults={defaults}
     />

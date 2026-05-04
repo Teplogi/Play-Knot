@@ -6,7 +6,7 @@ import { DivideSettingStep, type DivideSettings } from "@/components/divide/Divi
 import { DivideResultStep } from "@/components/divide/DivideResultStep";
 import { divideTeams, calcTeamCount, type Member } from "@/lib/divide/algorithm";
 import { Button } from "@/components/ui/button";
-import type { NgPair, TeamGuest } from "@/types";
+import type { MustPair, NgPair, TeamGuest } from "@/types";
 
 export type FutureSchedule = {
   id: string;
@@ -28,6 +28,7 @@ type DivideClientProps = {
   teamGuests: TeamGuest[];
   futureSchedules: FutureSchedule[];
   ngPairs: NgPair[];
+  mustPairs: MustPair[];
   isHost: boolean;
   defaults: DivideDefaults;
 };
@@ -43,6 +44,7 @@ export function DivideClient({
   teamGuests,
   futureSchedules,
   ngPairs,
+  mustPairs,
   defaults,
 }: DivideClientProps) {
   // team_guests を Member 形に正規化（id は guest UUID をそのまま使用）。
@@ -74,8 +76,8 @@ export function DivideClient({
     const { members, settings: s } = committed;
     const teamCount =
       s.divideBy === "team_count" ? s.value : calcTeamCount(members.length, s.value);
-    return divideTeams(members, teamCount, s.method, ngPairs);
-  }, [committed, ngPairs]);
+    return divideTeams(members, teamCount, s.method, ngPairs, mustPairs);
+  }, [committed, ngPairs, mustPairs]);
 
   const execute = () => {
     if (!canExecute || !settings) return;

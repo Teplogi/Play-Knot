@@ -11,19 +11,38 @@ export default async function NgListPage({
   await requireUser();
   const supabase = await createClient();
 
-  const [rawPairsRes, rawMembersRes] = await Promise.all([
+  const [rawNgPairsRes, rawMustPairsRes, rawMembersRes] = await Promise.all([
     supabase
       .from("ng_pairs")
-      .select("id, team_id, created_at, user_a:users!ng_pairs_user_id_a_fkey(id, name), user_b:users!ng_pairs_user_id_b_fkey(id, name)")
+      .select(
+        "id, team_id, created_at, user_a:users!ng_pairs_user_id_a_fkey(id, name), user_b:users!ng_pairs_user_id_b_fkey(id, name)"
+      )
+      .eq("team_id", teamId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("must_pairs")
+      .select(
+        "id, team_id, user_id_a, user_id_b, created_at, user_a:users!must_pairs_user_id_a_fkey(id, name), user_b:users!must_pairs_user_id_b_fkey(id, name)"
+      )
       .eq("team_id", teamId)
       .order("created_at", { ascending: false }),
     supabase.from("team_members").select("users(id, name)").eq("team_id", teamId),
   ]);
 
-  const pairs = (rawPairsRes.data ?? []).map((p) => ({
+  const ngPairs = (rawNgPairsRes.data ?? []).map((p) => ({
     id: p.id,
     team_id: p.team_id,
     created_at: p.created_at,
+    user_a: p.user_a as unknown as { id: string; name: string },
+    user_b: p.user_b as unknown as { id: string; name: string },
+  }));
+
+  const mustPairs = (rawMustPairsRes.data ?? []).map((p) => ({
+    id: p.id as string,
+    team_id: p.team_id as string,
+    user_id_a: p.user_id_a as string,
+    user_id_b: p.user_id_b as string,
+    created_at: p.created_at as string,
     user_a: p.user_a as unknown as { id: string; name: string },
     user_b: p.user_b as unknown as { id: string; name: string },
   }));
@@ -33,5 +52,12 @@ export default async function NgListPage({
     return { id: u.id, name: u.name };
   });
 
-  return <NgListClient teamId={teamId} initialPairs={pairs} members={members} />;
+  return (
+    <NgListClient
+      teamId={teamId}
+      initialNgPairs={ngPairs}
+      initialMustPairs={mustPairs}
+      members={members}
+    />
+  );
 }

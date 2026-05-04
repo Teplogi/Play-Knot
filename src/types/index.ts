@@ -113,6 +113,17 @@ export type NgPair = {
   created_at: string;
 };
 
+// 必ず同じチームにするペア（public.must_pairs テーブルに対応・ホスト専用）
+// chain を作らないため、同一ユーザは最大 1 件のみ参加 (API 層で担保)
+export type MustPair = {
+  id: string;
+  team_id: string;
+  user_id_a: string;
+  user_id_b: string;
+  created_by: string | null;
+  created_at: string;
+};
+
 // 招待トークン（public.invite_tokensテーブルに対応）
 export type InviteToken = {
   id: string;
