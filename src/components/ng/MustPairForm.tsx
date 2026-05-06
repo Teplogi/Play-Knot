@@ -19,7 +19,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
-type MemberOption = { id: string; name: string };
+type MemberOption = { id: string; name: string; isGuest?: boolean };
+
+const labelOf = (m: MemberOption) => (m.isGuest ? `${m.name}（助っ人）` : m.name);
 
 type MustPairFormProps = {
   teamId: string;
@@ -97,13 +99,16 @@ export function MustPairForm({
             <Select value={userIdA} onValueChange={(v) => v && setUserIdA(v)}>
               <SelectTrigger>
                 <SelectValue placeholder="選択してください">
-                  {(v) => members.find((m) => m.id === v)?.name ?? ""}
+                  {(v) => {
+                    const m = members.find((x) => x.id === v);
+                    return m ? labelOf(m) : "";
+                  }}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {members.map((m) => (
                   <SelectItem key={m.id} value={m.id} disabled={lockedMemberIds.has(m.id)}>
-                    {m.name}
+                    {labelOf(m)}
                     {lockedMemberIds.has(m.id) ? "（登録済み）" : ""}
                   </SelectItem>
                 ))}
@@ -118,7 +123,10 @@ export function MustPairForm({
             <Select value={userIdB} onValueChange={(v) => v && setUserIdB(v)}>
               <SelectTrigger>
                 <SelectValue placeholder="選択してください">
-                  {(v) => members.find((m) => m.id === v)?.name ?? ""}
+                  {(v) => {
+                    const m = members.find((x) => x.id === v);
+                    return m ? labelOf(m) : "";
+                  }}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -126,7 +134,7 @@ export function MustPairForm({
                   .filter((m) => m.id !== userIdA)
                   .map((m) => (
                     <SelectItem key={m.id} value={m.id} disabled={lockedMemberIds.has(m.id)}>
-                      {m.name}
+                      {labelOf(m)}
                       {lockedMemberIds.has(m.id) ? "（登録済み）" : ""}
                     </SelectItem>
                   ))}

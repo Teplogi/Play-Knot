@@ -28,7 +28,7 @@ type NgListClientProps = {
   initialNgPairs: PairWithUsers[];
   initialMustPairs: PairWithUsers[];
   conflicts: Conflict[];
-  members: { id: string; name: string }[];
+  members: { id: string; name: string; isGuest: boolean }[];
 };
 
 export function NgListClient({

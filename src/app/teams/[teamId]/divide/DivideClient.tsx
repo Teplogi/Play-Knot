@@ -48,8 +48,9 @@ export function DivideClient({
   defaults,
 }: DivideClientProps) {
   // team_guests を Member 形に正規化（id は guest UUID をそのまま使用）。
-  // ng_pairs は users.id 参照なので、guest id は filterNgPairsForMembers で
-  // 自然に弾かれる（NG 判定対象外として扱われる）。
+  // ng_pairs / must_pairs は user_id_a / user_id_b に users.id だけでなく
+  // team_guests.id も格納しうる (022 マイグレーション以降) ため、
+  // guest id を持つ Member は filterPairsForMembers で正しくマッチする。
   const guestMembers: Member[] = useMemo(
     () =>
       teamGuests.map((g) => ({

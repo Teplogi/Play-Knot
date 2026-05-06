@@ -21,7 +21,10 @@ import { toast } from "sonner";
 type MemberOption = {
   id: string;
   name: string;
+  isGuest?: boolean;
 };
+
+const labelOf = (m: MemberOption) => (m.isGuest ? `${m.name}（助っ人）` : m.name);
 
 type NgPairFormProps = {
   teamId: string;
@@ -85,13 +88,16 @@ export function NgPairForm({ teamId, members, onAdded }: NgPairFormProps) {
             <Select value={userIdA} onValueChange={(v) => v && setUserIdA(v)}>
               <SelectTrigger>
                 <SelectValue placeholder="選択してください">
-                  {(v) => members.find((m) => m.id === v)?.name ?? ""}
+                  {(v) => {
+                    const m = members.find((x) => x.id === v);
+                    return m ? labelOf(m) : "";
+                  }}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {members.map((m) => (
                   <SelectItem key={m.id} value={m.id}>
-                    {m.name}
+                    {labelOf(m)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -105,7 +111,10 @@ export function NgPairForm({ teamId, members, onAdded }: NgPairFormProps) {
             <Select value={userIdB} onValueChange={(v) => v && setUserIdB(v)}>
               <SelectTrigger>
                 <SelectValue placeholder="選択してください">
-                  {(v) => members.find((m) => m.id === v)?.name ?? ""}
+                  {(v) => {
+                    const m = members.find((x) => x.id === v);
+                    return m ? labelOf(m) : "";
+                  }}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -113,7 +122,7 @@ export function NgPairForm({ teamId, members, onAdded }: NgPairFormProps) {
                   .filter((m) => m.id !== userIdA)
                   .map((m) => (
                     <SelectItem key={m.id} value={m.id}>
-                      {m.name}
+                      {labelOf(m)}
                     </SelectItem>
                   ))}
               </SelectContent>

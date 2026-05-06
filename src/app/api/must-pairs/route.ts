@@ -15,6 +15,26 @@ async function verifyHostPrivilege(
   return member?.role === "host" || member?.role === "co_host";
 }
 
+// 当該チームのメンバー (users) と助っ人 (team_guests) の名前マップを返す。
+async function loadTeamParticipantNames(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  teamId: string
+): Promise<Map<string, { id: string; name: string }>> {
+  const map = new Map<string, { id: string; name: string }>();
+  const [memberRes, guestRes] = await Promise.all([
+    supabase.from("team_members").select("users(id, name)").eq("team_id", teamId),
+    supabase.from("team_guests").select("id, name").eq("team_id", teamId),
+  ]);
+  for (const row of memberRes.data ?? []) {
+    const u = row.users as unknown as { id: string; name: string } | null;
+    if (u) map.set(u.id, { id: u.id, name: u.name });
+  }
+  for (const g of guestRes.data ?? []) {
+    map.set(g.id as string, { id: g.id as string, name: g.name as string });
+  }
+  return map;
+}
+
 // 必ずペア一覧
 export async function GET(request: Request) {
   try {
@@ -32,9 +52,7 @@ export async function GET(request: Request) {
 
     const { data: pairs, error } = await supabase
       .from("must_pairs")
-      .select(
-        "*, user_a:users!must_pairs_user_id_a_fkey(id, name), user_b:users!must_pairs_user_id_b_fkey(id, name)"
-      )
+      .select("*")
       .eq("team_id", teamId)
       .order("created_at", { ascending: false });
 
@@ -42,7 +60,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "必ずペアの取得に失敗しました" }, { status: 500 });
     }
 
-    return NextResponse.json(pairs);
+    const nameMap = await loadTeamParticipantNames(supabase, teamId);
+    const resolve = (id: string) => nameMap.get(id) ?? { id, name: "不明" };
+    const enriched = (pairs ?? []).map((p) => ({
+      ...p,
+      user_a: resolve(p.user_id_a),
+      user_b: resolve(p.user_id_b),
+    }));
+
+    return NextResponse.json(enriched);
   } catch {
     return NextResponse.json({ error: "サーバーエラー" }, { status: 500 });
   }
@@ -64,6 +90,15 @@ export async function POST(request: Request) {
     }
     if (!(await verifyHostPrivilege(supabase, teamId, user.id))) {
       return NextResponse.json({ error: "ホスト権限が必要です" }, { status: 403 });
+    }
+
+    // 与えられた id がこのチームのメンバー / 助っ人として存在するかを検証
+    const nameMap = await loadTeamParticipantNames(supabase, teamId);
+    if (!nameMap.has(userIdA) || !nameMap.has(userIdB)) {
+      return NextResponse.json(
+        { error: "選択したメンバーがチームに存在しません" },
+        { status: 400 }
+      );
     }
 
     const [sortedA, sortedB] = userIdA < userIdB ? [userIdA, userIdB] : [userIdB, userIdA];
