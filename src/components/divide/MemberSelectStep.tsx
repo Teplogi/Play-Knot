@@ -11,6 +11,11 @@ import {
 } from "@/components/ui/dialog";
 import type { Member } from "@/lib/divide/algorithm";
 
+// 名前は最大 4 文字まで表示。それを超える場合は先頭 4 文字 + … で省略。
+function displayName(name: string): string {
+  return [...name].length > 4 ? `${[...name].slice(0, 4).join("")}…` : name;
+}
+
 type FutureSchedule = {
   id: string;
   date: string;
@@ -130,7 +135,7 @@ export function MemberSelectStep({
           メンバーがいません。メンバー管理画面から追加してください。
         </p>
       ) : (
-        <div className="grid grid-cols-6 gap-1.5">
+        <div className="grid grid-cols-3 gap-2">
           {allMembers.map((member) => {
             const checked = selectedIds.has(member.id);
             const g = genderLabel(member.gender);
@@ -139,13 +144,14 @@ export function MemberSelectStep({
               <div
                 key={member.id}
                 onClick={() => toggleMember(member.id)}
-                className={`relative flex flex-col items-center justify-center gap-0.5 px-1 py-2 rounded-lg border cursor-pointer transition-all duration-150 ${genderStyles(member.gender, checked, isGuest)}`}
+                className={`relative flex flex-col items-center justify-center gap-0.5 px-2 py-2.5 rounded-lg border cursor-pointer transition-all duration-150 ${genderStyles(member.gender, checked, isGuest)}`}
                 role="checkbox"
                 aria-checked={checked}
                 aria-label={`${member.name}を選択`}
+                title={member.name}
               >
-                <span className="text-xs font-semibold text-gray-900 w-full text-center truncate leading-tight px-1">
-                  {member.name}
+                <span className="text-sm font-semibold text-gray-900 w-full text-center leading-tight">
+                  {displayName(member.name)}
                 </span>
                 <span className={`text-[10px] font-bold leading-none ${g.cls}`}>{g.text}</span>
                 {isGuest && (
