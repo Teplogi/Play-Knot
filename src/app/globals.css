@@ -49,25 +49,25 @@
 }
 
 :root {
-  /* Indigo-based primary palette */
+  /* Indigo-based primary palette - 体育館（薄暗い環境）でも読みやすくコントラスト強化 */
   --background: oklch(0.985 0.002 260);
-  --foreground: oklch(0.145 0.005 260);
+  --foreground: oklch(0.12 0.005 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.005 260);
+  --card-foreground: oklch(0.12 0.005 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.005 260);
-  --primary: oklch(0.457 0.24 277.023);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.962 0.012 260);
-  --secondary-foreground: oklch(0.295 0.04 260);
-  --muted: oklch(0.962 0.012 260);
-  --muted-foreground: oklch(0.556 0.02 260);
-  --accent: oklch(0.952 0.024 277);
-  --accent-foreground: oklch(0.365 0.18 277);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.912 0.012 260);
-  --input: oklch(0.912 0.012 260);
-  --ring: oklch(0.457 0.24 277.023);
+  --popover-foreground: oklch(0.12 0.005 260);
+  --primary: oklch(0.42 0.24 277.023);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.95 0.012 260);
+  --secondary-foreground: oklch(0.22 0.04 260);
+  --muted: oklch(0.95 0.012 260);
+  --muted-foreground: oklch(0.4 0.02 260);
+  --accent: oklch(0.94 0.024 277);
+  --accent-foreground: oklch(0.32 0.18 277);
+  --destructive: oklch(0.5 0.245 27.325);
+  --border: oklch(0.88 0.012 260);
+  --input: oklch(0.88 0.012 260);
+  --ring: oklch(0.42 0.24 277.023);
   --chart-1: oklch(0.457 0.24 277.023);
   --chart-2: oklch(0.536 0.209 152);
   --chart-3: oklch(0.672 0.186 70);
@@ -90,10 +90,21 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* 体育館の薄暗い環境でも読みやすい本文サイズ */
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
   }
   html {
     @apply font-sans;
   }
+  /* 薄いグレーは体育館で見えにくいので底上げ（コントラスト 7:1 以上を目標） */
+  .text-gray-300 { color: oklch(0.62 0.01 260); }
+  .text-gray-400 { color: oklch(0.5 0.01 260); }
+  .text-gray-500 { color: oklch(0.42 0.015 260); }
+  .text-gray-600 { color: oklch(0.34 0.02 260); }
+  .text-gray-700 { color: oklch(0.26 0.02 260); }
+  .text-indigo-100 { color: oklch(0.95 0.04 277); }
 }
 
 /* ページフェードインアニメーション */
@@ -118,4 +129,13 @@
 /* ステッパーのコネクタライン */
 .stepper-line {
   @apply h-0.5 flex-1 transition-colors duration-300;
+}
+
+/* スクロールバー非表示（横スクロールナビ用） */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
