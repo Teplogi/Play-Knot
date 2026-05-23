@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser, getTeamMembership } from "@/lib/auth";
 import { TeamHomeClient } from "./TeamHomeClient";
-import { hasHostPrivilege } from "@/types";
+import type { Schedule, Attendance } from "@/types";
+
+type ScheduleWithAttendances = Schedule & { attendances: Attendance[] };
 
 export default async function TeamHomePage({
   params,
@@ -12,9 +14,8 @@ export default async function TeamHomePage({
   const user = await requireUser();
   const supabase = await createClient();
 
-  // メンバーシップ・人数・次回日程を並列取得
   const now = new Date().toISOString();
-  const [membership, memberCountRes, nextScheduleRes] = await Promise.all([
+  const [, memberCountRes, upcomingSchedulesRes] = await Promise.all([
     getTeamMembership(teamId),
     supabase
       .from("team_members")
@@ -26,31 +27,24 @@ export default async function TeamHomePage({
       .eq("team_id", teamId)
       .gte("date", now)
       .order("date", { ascending: true })
-      .limit(1)
-      .single(),
+      .limit(2),
   ]);
 
-  const isHost = hasHostPrivilege(membership?.role ?? "guest");
   const memberCount = memberCountRes.count;
-  const nextSchedule = nextScheduleRes.data;
+  const upcomingSchedules: ScheduleWithAttendances[] = upcomingSchedulesRes.data ?? [];
 
-  // 自分の出欠
-  const myAttendance = nextSchedule?.attendances?.find(
-    (a: { user_id: string }) => a.user_id === user.id
-  ) ?? null;
-
-  const attendCount = nextSchedule?.attendances?.filter(
-    (a: { status: string }) => a.status === "attend"
-  ).length ?? 0;
+  // 各日程に対する自分の出欠 + 参加人数を事前計算
+  const upcomingItems = upcomingSchedules.map((schedule) => {
+    const myAttendance = schedule.attendances?.find((a) => a.user_id === user.id) ?? null;
+    const attendCount = schedule.attendances?.filter((a) => a.status === "attend").length ?? 0;
+    return { schedule, myAttendance, attendCount };
+  });
 
   return (
     <TeamHomeClient
       teamId={teamId}
-      isHost={isHost}
       memberCount={memberCount ?? 0}
-      nextSchedule={nextSchedule ?? null}
-      myAttendance={myAttendance}
-      attendCount={attendCount}
+      upcomingItems={upcomingItems}
     />
   );
 }

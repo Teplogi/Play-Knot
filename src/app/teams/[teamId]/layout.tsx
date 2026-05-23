@@ -43,7 +43,7 @@ export default async function TeamLayout({
   return (
     <div className="min-h-screen">
       <TeamNav teamId={teamId} teamName={team.name} role={role} />
-      <main className="md:ml-60 pb-8">
+      <main className="pb-8">
         <div className="animate-page-in max-w-3xl mx-auto px-4 sm:px-6 py-6">
           {children}
         </div>
