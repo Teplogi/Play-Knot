@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Logo } from "@/components/brand/Logo";
+import { SportBackground } from "@/components/brand/SportBackground";
+import { SPORT_OPTIONS, DEFAULT_SPORT, resolveSport, type SportKey } from "@/lib/sports";
 
 type Team = {
   id: string;
@@ -69,7 +71,7 @@ export function TeamsClient({
   const { signOut } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
-  const [newSportType, setNewSportType] = useState("");
+  const [newSportKey, setNewSportKey] = useState<SportKey>(DEFAULT_SPORT);
 
   const [creating, setCreating] = useState(false);
 
@@ -80,21 +82,22 @@ export function TeamsClient({
     }
     setCreating(true);
     try {
+      const sportLabel = SPORT_OPTIONS.find((o) => o.key === newSportKey)?.label ?? "";
       const res = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newTeamName, sportType: newSportType }),
+        body: JSON.stringify({ name: newTeamName, sportType: sportLabel }),
       });
       if (!res.ok) {
         const data = await res.json();
         toast.error(data.error || "チームの作成に失敗しました");
         return;
       }
-      const team = await res.json();
+      await res.json();
       toast.success(`「${newTeamName}」を作成しました`);
       setCreateOpen(false);
       setNewTeamName("");
-      setNewSportType("");
+      setNewSportKey(DEFAULT_SPORT);
       // チーム一覧をリロードして新しいチームを表示
       window.location.href = "/teams";
     } catch {
@@ -104,8 +107,19 @@ export function TeamsClient({
     }
   };
 
+  // チーム一覧では、所属する各チームのスポーツ種目から代表を選んで背景に出す。
+  // 種目が混在している場合は最頻、無ければサッカーをデフォルトに。
+  const sportCount = new Map<SportKey, number>();
+  for (const t of teams) {
+    const k = resolveSport(t.sportType);
+    sportCount.set(k, (sportCount.get(k) ?? 0) + 1);
+  }
+  const topSport: SportKey =
+    [...sportCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "soccer";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50/50 via-white to-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50/50 via-white to-gray-50 relative">
+      <SportBackground sport={topSport} />
       {/* ヘッダー */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -239,14 +253,27 @@ export function TeamsClient({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new-sport-type">スポーツ種別（任意）</Label>
-              <Input
-                id="new-sport-type"
-                value={newSportType}
-                onChange={(e) => setNewSportType(e.target.value)}
-                placeholder="例: バスケットボール、フットサル"
-                maxLength={30}
-              />
+              <Label>スポーツ種別</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {SPORT_OPTIONS.map((opt) => {
+                  const active = newSportKey === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setNewSportKey(opt.key)}
+                      aria-pressed={active}
+                      className={`h-11 rounded-lg border text-sm font-medium transition-colors px-2 ${
+                        active
+                          ? "border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300"
+                          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
           <DialogFooter>

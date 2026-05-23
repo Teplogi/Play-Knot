@@ -46,6 +46,7 @@ export type InviteLink = {
 
 import type { TeamRole, NotificationDaysBefore } from "@/types";
 import { hasHostPrivilege } from "@/types";
+import { SPORT_OPTIONS, resolveSport } from "@/lib/sports";
 
 type MemberOption = { id: string; name: string; role: TeamRole };
 
@@ -950,13 +951,30 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="team-sport">スポーツ種別</Label>
-            <Input
-              id="team-sport"
-              value={settings.sportType}
-              onChange={(e) => update("sportType", e.target.value)}
-              placeholder="例: バスケットボール"
-            />
+            <Label>スポーツ種別</Label>
+            <p className="text-xs text-gray-600">
+              選んだ種目のボール装飾が、チームの全画面の背景に表示されます。
+            </p>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              {SPORT_OPTIONS.map((opt) => {
+                const active = resolveSport(settings.sportType) === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => update("sportType", opt.label)}
+                    aria-pressed={active}
+                    className={`h-12 rounded-lg border text-sm font-medium transition-colors px-2 ${
+                      active
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="team-desc">説明</Label>

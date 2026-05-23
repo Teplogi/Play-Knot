@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser, getTeamMembership } from "@/lib/auth";
 import { TeamNav } from "@/components/layout/TeamNav";
+import { SportBackground } from "@/components/brand/SportBackground";
+import { resolveSport } from "@/lib/sports";
 import { hasHostPrivilege } from "@/types";
 
 const HOST_ONLY_SEGMENTS = ["members", "ng-list", "attendance"];
@@ -16,11 +18,11 @@ export default async function TeamLayout({
 }) {
   const { teamId } = await params;
 
-  // 認証 + 並列でチーム名・メンバーシップを取得
+  // 認証 + 並列でチーム名・スポーツ種別・メンバーシップを取得
   await requireUser();
   const supabase = await createClient();
   const [teamRes, membership] = await Promise.all([
-    supabase.from("teams").select("name").eq("id", teamId).single(),
+    supabase.from("teams").select("name, sport_type").eq("id", teamId).single(),
     getTeamMembership(teamId),
   ]);
 
@@ -29,6 +31,7 @@ export default async function TeamLayout({
   if (!membership) notFound();
 
   const role = membership.role;
+  const sport = resolveSport(team.sport_type);
 
   // ゲストがホスト限定ページに直接アクセスした場合は 404
   if (!hasHostPrivilege(role)) {
@@ -41,7 +44,8 @@ export default async function TeamLayout({
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      <SportBackground sport={sport} />
       <TeamNav teamId={teamId} teamName={team.name} role={role} />
       <main className="pb-8">
         <div className="animate-page-in max-w-3xl mx-auto px-4 sm:px-6 py-6">
