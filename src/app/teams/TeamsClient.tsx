@@ -142,7 +142,7 @@ export function TeamsClient({
                 </>
               )}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">チームを選択してください</p>
+            <p className="text-gray-600 text-sm sm:text-base mt-1">チームを選択してください</p>
           </div>
           {teams.length > 0 && canCreateTeam && (
             <Button
@@ -159,10 +159,10 @@ export function TeamsClient({
             <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>
             </div>
-            <p className="text-gray-700 font-medium mb-1">まだチームに参加していません</p>
+            <p className="text-gray-800 font-medium text-base mb-1">まだチームに参加していません</p>
             {canCreateTeam ? (
               <>
-                <p className="text-sm text-gray-400 mb-6">チームを作成するか、招待リンクから参加できます</p>
+                <p className="text-sm text-gray-600 mb-6">チームを作成するか、招待リンクから参加できます</p>
                 <Button
                   onClick={() => setCreateOpen(true)}
                   className="rounded-xl bg-indigo-600 hover:bg-indigo-700 h-11 px-6"
@@ -171,7 +171,7 @@ export function TeamsClient({
                 </Button>
               </>
             ) : (
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-600">
                 招待URLを受け取ってチームに参加してください。
               </p>
             )}
@@ -182,23 +182,23 @@ export function TeamsClient({
               const color = team.iconColor || "indigo";
               return (
                 <Link key={team.id} href={`/teams/${team.id}`}>
-                  <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md hover:border-indigo-100 transition-all duration-200 cursor-pointer group">
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-md hover:border-indigo-200 transition-all duration-200 cursor-pointer group">
                     <div className="flex items-center gap-3">
-                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${ICON_BG_LIGHT[color] ?? ICON_BG_LIGHT.indigo}`}>
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${ICON_BG_LIGHT[color] ?? ICON_BG_LIGHT.indigo}`}>
                         <span className={`font-bold text-lg ${ICON_TEXT[color] ?? ICON_TEXT.indigo}`}>{team.name.charAt(0)}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         {/* 1行目: チーム名 + ロール */}
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-900 truncate">{team.name}</h3>
+                          <h3 className="font-semibold text-base text-gray-900 truncate">{team.name}</h3>
                           <Badge
                             variant="outline"
-                            className={`text-[10px] flex-shrink-0 ${
+                            className={`text-xs flex-shrink-0 ${
                               team.role === "host"
-                                ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                                ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                                 : team.role === "co_host"
-                                ? "bg-violet-50 text-violet-600 border-violet-200"
-                                : "text-gray-500"
+                                ? "bg-violet-50 text-violet-700 border-violet-200"
+                                : "text-gray-700 border-gray-200"
                             }`}
                           >
                             {ROLE_LABELS[team.role as TeamRole] ?? "ゲスト"}
@@ -206,25 +206,25 @@ export function TeamsClient({
                         </div>
                         {/* 2行目: スポーツ種別（あれば、はみ出したら省略） */}
                         {team.sportType && (
-                          <p className="text-xs text-gray-400 truncate mt-0.5">{team.sportType}</p>
+                          <p className="text-sm text-gray-600 truncate mt-1">{team.sportType}</p>
                         )}
                         {/* 3行目: 人数 + 次回日程（折返さず省略） */}
-                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 whitespace-nowrap overflow-hidden">
+                        <div className="flex items-center gap-3 mt-1.5 text-sm text-gray-600 whitespace-nowrap overflow-hidden">
                           <span className="flex items-center gap-1 flex-shrink-0">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" /></svg>
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" /></svg>
                             {team.memberCount}人
                           </span>
                           {team.nextSchedule ? (
-                            <span className="flex items-center gap-1 text-indigo-500 min-w-0 truncate">
-                              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
+                            <span className="flex items-center gap-1 text-indigo-600 font-medium min-w-0 truncate">
+                              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
                               <span className="truncate">次回 {team.nextSchedule}</span>
                             </span>
                           ) : (
-                            <span className="text-gray-300 flex-shrink-0">予定なし</span>
+                            <span className="text-gray-500 flex-shrink-0">予定なし</span>
                           )}
                         </div>
                       </div>
-                      <svg className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                      <svg className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
                     </div>
                   </div>
                 </Link>
