@@ -64,6 +64,18 @@ export default async function ScheduleDetailPage({
   const schedule = scheduleRes.data;
   if (!schedule) notFound();
 
+  // 確定チームの取得失敗時は Vercel ログで原因を追えるようにする。
+  // 一覧の RLS が拒否したり、テーブル未作成のときにここで気付ける。
+  if (savedDivisionRes.error) {
+    console.error("[schedule-detail] saved_team_divisions load failed", {
+      scheduleId,
+      teamId,
+      code: savedDivisionRes.error.code,
+      message: savedDivisionRes.error.message,
+      details: savedDivisionRes.error.details,
+    });
+  }
+
   const canManageSchedule = hasHostPrivilege(membership?.role ?? "guest");
   const totalMembers = totalMembersRes.count;
   const allowTentative = teamSettingsRes.data?.allow_tentative ?? false;
