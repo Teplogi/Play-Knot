@@ -2,7 +2,12 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser, getTeamMembership } from "@/lib/auth";
 import { ScheduleDetailClient } from "./ScheduleDetailClient";
-import { hasHostPrivilege, type ScheduleGuestWithGuest, type TeamGuest } from "@/types";
+import {
+  hasHostPrivilege,
+  type SavedTeamDivision,
+  type ScheduleGuestWithGuest,
+  type TeamGuest,
+} from "@/types";
 
 export default async function ScheduleDetailPage({
   params,
@@ -20,6 +25,7 @@ export default async function ScheduleDetailPage({
     teamSettingsRes,
     invitedGuestsRes,
     teamGuestsRes,
+    savedDivisionRes,
   ] = await Promise.all([
     getTeamMembership(teamId),
     supabase
@@ -48,6 +54,11 @@ export default async function ScheduleDetailPage({
       .select("*")
       .eq("team_id", teamId)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("saved_team_divisions")
+      .select("*")
+      .eq("schedule_id", scheduleId)
+      .maybeSingle(),
   ]);
 
   const schedule = scheduleRes.data;
@@ -71,6 +82,7 @@ export default async function ScheduleDetailPage({
       allowTentative={allowTentative}
       invitedGuests={(invitedGuestsRes.data ?? []) as ScheduleGuestWithGuest[]}
       teamGuests={(teamGuestsRes.data ?? []) as TeamGuest[]}
+      savedDivision={(savedDivisionRes.data as SavedTeamDivision | null) ?? null}
     />
   );
 }

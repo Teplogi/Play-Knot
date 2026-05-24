@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { AttendanceForm } from "@/components/attendance/AttendanceForm";
 import { AttendanceList } from "@/components/attendance/AttendanceList";
 import { EditScheduleDialog } from "@/components/schedule/EditScheduleDialog";
+import { SavedDivisionCard } from "@/components/schedule/SavedDivisionCard";
 import { ScheduleGuestsSection } from "@/components/guests/ScheduleGuestsSection";
 import type {
   Schedule,
   AttendanceWithUser,
+  SavedTeamDivision,
   ScheduleGuestWithGuest,
   TeamGuest,
 } from "@/types";
@@ -25,6 +27,8 @@ type Props = {
   allowTentative: boolean;
   invitedGuests: ScheduleGuestWithGuest[];
   teamGuests: TeamGuest[];
+  /** この日程に保存されているチーム分け結果 (なければ null) */
+  savedDivision: SavedTeamDivision | null;
 };
 
 /**
@@ -95,6 +99,7 @@ export function ScheduleDetailClient({
   allowTentative,
   invitedGuests,
   teamGuests,
+  savedDivision,
 }: Props) {
   const router = useRouter();
 
@@ -266,6 +271,15 @@ export function ScheduleDetailClient({
           />
         </div>
       </div>
+
+      {/* 確定チーム (保存されている場合のみ表示) */}
+      {savedDivision && (
+        <SavedDivisionCard
+          division={savedDivision}
+          canManage={canManageSchedule}
+          scheduleId={schedule.id}
+        />
+      )}
 
       {/* 出欠一覧カード */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">

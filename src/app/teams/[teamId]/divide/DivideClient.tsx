@@ -17,6 +17,15 @@ export type FutureSchedule = {
   invitedGuestIds: string[];
 };
 
+// 「この日程に保存」ダイアログ用に、過去 60 日 + 未来全てを軽量に渡す。
+export type BindableSchedule = {
+  id: string;
+  date: string;
+  location: string | null;
+  /** 既にチーム分けが保存済みか (上書き確認用) */
+  hasSaved: boolean;
+};
+
 type DivideDefaults = {
   divideBy: "team_count" | "members_per_team";
   divideValue: number;
@@ -27,6 +36,7 @@ type DivideClientProps = {
   registeredMembers: Member[];
   teamGuests: TeamGuest[];
   futureSchedules: FutureSchedule[];
+  bindableSchedules: BindableSchedule[];
   ngPairs: NgPair[];
   mustPairs: MustPair[];
   isHost: boolean;
@@ -43,8 +53,10 @@ export function DivideClient({
   registeredMembers,
   teamGuests,
   futureSchedules,
+  bindableSchedules,
   ngPairs,
   mustPairs,
+  isHost,
   defaults,
 }: DivideClientProps) {
   // team_guests を Member 形に正規化（id は guest UUID をそのまま使用）。
@@ -160,6 +172,9 @@ export function DivideClient({
             teams={result.teams}
             hasNgViolation={result.hasNgViolation}
             onReshuffle={reshuffle}
+            bindableSchedules={bindableSchedules}
+            settings={committed?.settings ?? null}
+            canSave={isHost}
           />
         )}
       </section>
