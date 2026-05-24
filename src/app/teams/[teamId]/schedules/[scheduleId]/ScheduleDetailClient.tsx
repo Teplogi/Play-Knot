@@ -27,23 +27,33 @@ type Props = {
   teamGuests: TeamGuest[];
 };
 
+/**
+ * 各カードのセクションヘッダー。控えめなトーンで統一する。
+ *   - 背景は白のまま
+ *   - 下部のみ薄いボーダー
+ *   - タイトル左に小さな色付きアイコンバッジ
+ */
 function SectionHeader({
   title,
-  gradient,
+  iconBg,
+  iconText,
   icon,
   right,
 }: {
   title: string;
-  gradient: string;
+  iconBg: string;
+  iconText: string;
   icon: React.ReactNode;
   right?: React.ReactNode;
 }) {
   return (
-    <div className={`${gradient} px-5 py-3 flex items-center justify-between`}>
-      <p className="text-white text-sm font-bold flex items-center gap-2">
-        {icon}
-        {title}
-      </p>
+    <div className="border-b border-gray-100 px-5 py-3 flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
+        <div className={`w-7 h-7 rounded-md flex items-center justify-center ${iconBg} ${iconText}`}>
+          {icon}
+        </div>
+        <p className="text-base font-semibold text-gray-900">{title}</p>
+      </div>
       {right}
     </div>
   );
@@ -99,8 +109,6 @@ export function ScheduleDetailClient({
   const isFull = schedule.capacity !== null && attendCount >= schedule.capacity;
 
   const responseTotal = totalMembers + invitedGuests.length;
-  const attendanceRate =
-    responseTotal > 0 ? Math.round((attendCount / responseTotal) * 100) : 0;
 
   const date = new Date(schedule.date);
   const endDate = schedule.end_date ? new Date(schedule.end_date) : null;
@@ -121,25 +129,19 @@ export function ScheduleDetailClient({
 
       {/* 日程情報カード */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        {/* グラデヘッダー: 日付ヒーロー */}
-        <div className="bg-gradient-to-br from-indigo-600 via-indigo-500 to-indigo-500 px-5 py-4 relative overflow-hidden">
-          {/* 背景の装飾円 */}
-          <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" aria-hidden="true" />
-          <div className="absolute -right-12 -bottom-16 w-32 h-32 rounded-full bg-white/5" aria-hidden="true" />
-          <div className="relative">
-            <p className="text-indigo-100 text-[11px] font-semibold tracking-widest uppercase">Schedule</p>
-            <p className="text-white text-2xl font-bold mt-1 leading-tight">
-              {format(date, "M月d日", { locale: ja })}
-              <span className="text-indigo-100 text-base font-medium ml-1.5">
-                ({format(date, "E", { locale: ja })})
-              </span>
-            </p>
-            <p className="text-indigo-50 text-sm font-medium mt-1.5 flex items-center gap-1.5">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              {format(date, "HH:mm")}
-              {endDate && <span> 〜 {format(endDate, "HH:mm")}</span>}
-            </p>
-          </div>
+        {/* 日付ヘッダー: 上端に細い indigo アクセント + 落ち着いた配色 */}
+        <div className="border-t-2 border-indigo-500 border-b border-gray-100 px-5 py-4">
+          <p className="text-2xl font-bold text-gray-900 leading-tight">
+            {format(date, "M月d日", { locale: ja })}
+            <span className="text-gray-500 text-base font-medium ml-1.5">
+              ({format(date, "E", { locale: ja })})
+            </span>
+          </p>
+          <p className="text-gray-600 text-sm font-medium mt-1.5 flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            {format(date, "HH:mm")}
+            {endDate && <span> 〜 {format(endDate, "HH:mm")}</span>}
+          </p>
         </div>
         {/* 詳細行 */}
         <div className="p-5 space-y-3">
@@ -219,9 +221,10 @@ export function ScheduleDetailClient({
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <SectionHeader
           title="出欠回答"
-          gradient="bg-gradient-to-r from-emerald-600 to-emerald-500"
+          iconBg="bg-emerald-50"
+          iconText="text-emerald-600"
           icon={
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           }
@@ -245,9 +248,10 @@ export function ScheduleDetailClient({
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <SectionHeader
           title="ゲスト招集"
-          gradient="bg-gradient-to-r from-amber-500 to-orange-400"
+          iconBg="bg-amber-50"
+          iconText="text-amber-600"
           icon={
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
           }
@@ -265,27 +269,21 @@ export function ScheduleDetailClient({
 
       {/* 出欠一覧カード */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-sky-600 to-sky-500 px-5 py-3">
-          <div className="flex items-center justify-between">
-            <p className="text-white text-sm font-bold flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              出欠一覧
-            </p>
-            <p className="text-white text-xs font-semibold">
+        <SectionHeader
+          title="出欠一覧"
+          iconBg="bg-sky-50"
+          iconText="text-sky-600"
+          icon={
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          }
+          right={
+            <span className="text-xs font-medium text-gray-600">
               参加 {attendCount} / {responseTotal} 人
-            </p>
-          </div>
-          {/* プログレスバー */}
-          <div className="mt-2 h-1.5 bg-sky-800/30 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white rounded-full transition-all duration-500"
-              style={{ width: `${attendanceRate}%` }}
-              aria-label={`参加率 ${attendanceRate}%`}
-            />
-          </div>
-        </div>
+            </span>
+          }
+        />
         <div className="p-5">
           <AttendanceList
             attendances={attendances}
