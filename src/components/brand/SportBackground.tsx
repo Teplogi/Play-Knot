@@ -178,24 +178,32 @@ export function SportBackground({ sport }: { sport: SportKey }) {
   const Ball = BALL_BY_SPORT[sport];
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+      {/* 流れるアクセントライン (画面全体に薄く流す) */}
       <svg
         viewBox="0 0 1200 1000"
         preserveAspectRatio="xMidYMid slice"
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full opacity-[0.08]"
       >
-        {/* 流れるアクセントライン */}
-        <g opacity="0.07">
-          <FlowLines />
-        </g>
-        {/* 右上の大きなボール */}
-        <g opacity="0.09">
-          <Ball cx={1050} cy={180} r={170} />
-        </g>
-        {/* 中央右下の小さなボール */}
-        <g opacity="0.06">
-          <Ball cx={900} cy={780} r={70} />
-        </g>
+        <FlowLines />
       </svg>
+      {/*
+        ボールは画面端を基準に絶対配置する。
+        以前は単一 SVG (viewBox 1200x1000, slice) に詰めていたが、
+        モバイル縦長ビューポートでは右側の cx=900〜1050 が大幅にクロップされ
+        ボールが見えなくなる問題があったため、ビューポート相対の配置に変更。
+      */}
+      {/* 右上の大きなボール */}
+      <div className="absolute -top-6 -right-10 sm:-top-4 sm:-right-6 w-44 sm:w-64 md:w-80 lg:w-96 aspect-square opacity-[0.1]">
+        <svg viewBox="0 0 200 200" className="w-full h-full">
+          <Ball cx={100} cy={100} r={95} />
+        </svg>
+      </div>
+      {/* 右下〜中央の小さなボール */}
+      <div className="absolute bottom-24 -right-4 sm:bottom-28 sm:right-16 md:right-32 w-24 sm:w-28 md:w-32 aspect-square opacity-[0.08]">
+        <svg viewBox="0 0 200 200" className="w-full h-full">
+          <Ball cx={100} cy={100} r={95} />
+        </svg>
+      </div>
     </div>
   );
 }
