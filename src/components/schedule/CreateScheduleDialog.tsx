@@ -199,25 +199,25 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
               </div>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="min-w-0">
-              <Label htmlFor="capacity">定員（任意）</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="capacity"
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={capacity}
-                  onChange={(e) => setCapacity(e.target.value)}
-                  placeholder="無制限"
-                  className="w-full"
-                />
-                <span className="text-sm text-muted-foreground flex-shrink-0">人</span>
-              </div>
+          <div>
+            <Label htmlFor="capacity">定員（任意）</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="capacity"
+                type="number"
+                min={1}
+                max={100}
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                placeholder="無制限"
+                className="w-[100px]"
+              />
+              <span className="text-sm text-muted-foreground flex-shrink-0">人</span>
             </div>
-            <div className="min-w-0">
-              <Label htmlFor="deadline">回答締切（任意）</Label>
+          </div>
+          <div>
+            <Label htmlFor="deadline">回答締切（任意）</Label>
+            <div className="flex items-center gap-2 flex-wrap">
               <Input
                 id="deadline"
                 type="datetime-local"
@@ -226,8 +226,23 @@ export function CreateScheduleDialog({ teamId, defaults }: CreateScheduleDialogP
                   setDeadline(e.target.value);
                   setDeadlineTouched(true);
                 }}
-                className="w-full"
+                className="w-[210px]"
               />
+              {deadline && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // 一度設定した締切を取り消す。自動同期 (open 時のデフォルト計算)
+                    // が再度上書きしないよう deadlineTouched を立てたままにする。
+                    setDeadline("");
+                    setDeadlineTouched(true);
+                  }}
+                  className="text-xs text-gray-500 hover:text-red-600 underline-offset-2 hover:underline"
+                  aria-label="回答締切をリセット"
+                >
+                  リセット
+                </button>
+              )}
             </div>
           </div>
           <div>

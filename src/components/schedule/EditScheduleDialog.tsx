@@ -180,32 +180,42 @@ export function EditScheduleDialog({ schedule }: EditScheduleDialogProps) {
               required
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="min-w-0">
-              <Label htmlFor="edit-capacity">定員（任意）</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="edit-capacity"
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={capacity}
-                  onChange={(e) => setCapacity(e.target.value)}
-                  placeholder="無制限"
-                  className="w-full"
-                />
-                <span className="text-sm text-muted-foreground flex-shrink-0">人</span>
-              </div>
+          <div>
+            <Label htmlFor="edit-capacity">定員（任意）</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="edit-capacity"
+                type="number"
+                min={1}
+                max={100}
+                value={capacity}
+                onChange={(e) => setCapacity(e.target.value)}
+                placeholder="無制限"
+                className="w-[100px]"
+              />
+              <span className="text-sm text-muted-foreground flex-shrink-0">人</span>
             </div>
-            <div className="min-w-0">
-              <Label htmlFor="edit-deadline">回答締切（任意）</Label>
+          </div>
+          <div>
+            <Label htmlFor="edit-deadline">回答締切（任意）</Label>
+            <div className="flex items-center gap-2 flex-wrap">
               <Input
                 id="edit-deadline"
                 type="datetime-local"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="w-full"
+                className="w-[210px]"
               />
+              {deadline && (
+                <button
+                  type="button"
+                  onClick={() => setDeadline("")}
+                  className="text-xs text-gray-500 hover:text-red-600 underline-offset-2 hover:underline"
+                  aria-label="回答締切をリセット"
+                >
+                  リセット
+                </button>
+              )}
             </div>
           </div>
           <div>
