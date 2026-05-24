@@ -124,6 +124,28 @@ export type MustPair = {
   created_at: string;
 };
 
+// 確定したチーム分け結果（public.saved_team_divisions テーブルに対応）
+// 1 日程につき 1 件保存される。teams は Member[][] のスナップショット。
+export type SavedTeamDivisionMember = {
+  id: string;
+  name: string;
+  gender: "男" | "女" | "未設定";
+  isDummy?: boolean;
+};
+
+export type SavedTeamDivision = {
+  id: string;
+  schedule_id: string;
+  team_id: string;
+  teams: SavedTeamDivisionMember[][];
+  method: "random" | "gender_equal";
+  divide_by: "team_count" | "members_per_team";
+  divide_value: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 // 招待トークン（public.invite_tokensテーブルに対応）
 export type InviteToken = {
   id: string;
