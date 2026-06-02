@@ -48,7 +48,7 @@ function layout({
     <a href="${ctaUrl}" style="display: inline-block; padding: 10px 20px; background: #1a1a1a; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px;">${ctaLabel}</a>
   </div>
   <p style="font-size: 12px; color: #9ca3af; margin-top: 16px; text-align: center;">
-    このメールは Play Knot から自動送信されています
+    このメールは チームのわ から自動送信されています
   </p>
 </body>
 </html>`.trim();

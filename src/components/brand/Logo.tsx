@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * Play Knot ロゴ
+ * チームのわ ロゴ
  *
- * コンセプト: 2つのリングが交差する「結び目」= チームの絆
- * "Play" はライトウェイト、"Knot" はボールド — 動と静のコントラスト
+ * コンセプト: 2つのリングが交差する「輪」= チームの絆・和
+ * "チームの" はライトウェイト、"わ" はボールド — 軽やかさと結びつきのコントラスト
  */
 
 type LogoIconProps = {
@@ -64,8 +64,8 @@ const TEXT_SIZES = {
 export function LogoText({ size = "md", className }: LogoTextProps) {
   return (
     <span className={`tracking-tight ${TEXT_SIZES[size]} ${className ?? ""}`}>
-      <span className="font-light italic">Play</span>
-      <span className="font-extrabold ml-0.5">Knot</span>
+      <span className="font-light">チームの</span>
+      <span className="font-extrabold">わ</span>
     </span>
   );
 }

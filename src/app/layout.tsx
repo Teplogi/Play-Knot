@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Play Knot - スポーツチーム管理",
+  title: "チームのわ - スポーツチーム管理",
   description: "チームの出欠管理からチーム分けまでワンストップで",
 };
 

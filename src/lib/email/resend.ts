@@ -22,7 +22,7 @@ export async function sendEmail({ to, subject, html }: SendEmailParams): Promise
   try {
     const resend = getResend();
     const { error } = await resend.emails.send({
-      from: `Play Knot <${fromEmail}>`,
+      from: `チームのわ <${fromEmail}>`,
       to: Array.isArray(to) ? to : [to],
       subject,
       html,
