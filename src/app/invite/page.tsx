@@ -18,15 +18,12 @@ function InviteContent() {
     if (!token) return;
     const processInvite = async () => {
       const supabase = createClient();
-      const { data: inviteToken } = await supabase
-        .from("invite_tokens")
-        .select("*, teams(name)")
-        .eq("token", token)
-        .is("used_at", null)
-        .single();
-      if (!inviteToken || new Date(inviteToken.expires_at) < new Date()) { setStatus("invalid"); return; }
-      const teams = inviteToken.teams as unknown as { name: string };
-      setTeamName(teams?.name ?? "");
+      // 招待先はホストではないため invite_tokens を直接 SELECT できない。
+      // SECURITY DEFINER の RPC で有効性とチーム名を取得する。
+      const { data } = await supabase.rpc("get_invite_info", { p_token: token });
+      const info = Array.isArray(data) ? data[0] : data;
+      if (!info || !info.is_valid) { setStatus("invalid"); return; }
+      setTeamName((info.team_name as string) ?? "");
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setStatus("joining");

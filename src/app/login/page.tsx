@@ -18,15 +18,12 @@ function LoginContent() {
 
     const fetchTeamName = async () => {
       const supabase = createClient();
-      const { data } = await supabase
-        .from("invite_tokens")
-        .select("team_id, teams(name)")
-        .eq("token", token)
-        .is("used_at", null)
-        .single();
-      if (data?.teams) {
-        const teams = data.teams as unknown as { name: string };
-        setTeamName(teams.name);
+      // 招待先はホストではないため invite_tokens を直接 SELECT できない。
+      // SECURITY DEFINER の RPC でチーム名を取得する（未ログインでも可）。
+      const { data } = await supabase.rpc("get_invite_info", { p_token: token });
+      const info = Array.isArray(data) ? data[0] : data;
+      if (info?.is_valid && info.team_name) {
+        setTeamName(info.team_name as string);
       }
     };
     fetchTeamName();
