@@ -1,10 +1,12 @@
 "use client";
 
+import Image from "next/image";
+
 /**
  * チームのわ ロゴ
  *
- * コンセプト: 2つのリングが交差する「輪」= チームの絆・和
- * "チームの" はライトウェイト、"わ" はボールド — 軽やかさと結びつきのコントラスト
+ * コンセプト: 4人が手を取り合い輪をつくる = チームの絆・和
+ * アイコンはアプリアイコン（favicon / ホーム画面）と同一デザイン
  */
 
 type LogoIconProps = {
@@ -14,39 +16,15 @@ type LogoIconProps = {
 
 export function LogoIcon({ size = 32, className }: LogoIconProps) {
   return (
-    <svg
+    <Image
+      src="/logo.png"
       width={size}
       height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      alt=""
       aria-hidden="true"
-    >
-      {/* 背景 */}
-      <rect width="40" height="40" rx="10" fill="url(#logo-grad)" />
-
-      {/* 結び目モチーフ: 2つの楕円リングが交差 */}
-      {/* 左リング（背面部分） */}
-      <ellipse cx="16" cy="20" rx="9" ry="7" stroke="white" strokeWidth="2.5" strokeOpacity="0.5" fill="none" />
-      {/* 右リング（前面に被る部分を塗り潰しで隠す） */}
-      <ellipse cx="24" cy="20" rx="9" ry="7" stroke="white" strokeWidth="2.5" fill="none" />
-      {/* 交差部分のハイライト — 左リングの前面部分を再描画 */}
-      <path
-        d="M 19.5 14.2 A 9 7 0 0 0 19.5 25.8"
-        stroke="white"
-        strokeWidth="2.5"
-        fill="none"
-        strokeLinecap="round"
-      />
-
-      <defs>
-        <linearGradient id="logo-grad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#6366f1" />
-          <stop offset="1" stopColor="#8b5cf6" />
-        </linearGradient>
-      </defs>
-    </svg>
+      className={`rounded-full ${className ?? ""}`}
+      priority
+    />
   );
 }
 
