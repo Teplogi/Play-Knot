@@ -135,7 +135,7 @@ export function MemberSelectStep({
           メンバーがいません。メンバー管理画面から追加してください。
         </p>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-6 gap-2">
           {allMembers.map((member) => {
             const checked = selectedIds.has(member.id);
             const g = genderLabel(member.gender);
