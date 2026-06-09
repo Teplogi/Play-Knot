@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogoIcon, LogoText } from "@/components/brand/Logo";
+import { LogoWordmark } from "@/components/brand/Logo";
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -50,13 +50,7 @@ function LoginContent() {
       <div className="w-full max-w-sm animate-page-in">
         {/* ロゴ */}
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 flex justify-center">
-            <LogoIcon size={64} className="shadow-lg shadow-indigo-200/50" />
-          </div>
-          <h1 className="text-2xl">
-            <LogoText size="lg" className="text-gray-900" />
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">スポーツチーム管理</p>
+          <LogoWordmark className="h-20 w-auto mx-auto" priority />
         </div>
 
         {/* カード */}

@@ -28,6 +28,30 @@ export function LogoIcon({ size = 32, className }: LogoIconProps) {
   );
 }
 
+/**
+ * 横型ロゴ（ワードマーク）。
+ * 「チームのわ / スポーツチーム管理」の文字と図柄を含む 1 枚絵なので、
+ * 別途 LogoText を併記しない。元画像 816x316 の比率を維持する。
+ */
+export function LogoWordmark({
+  className,
+  priority,
+}: {
+  className?: string;
+  priority?: boolean;
+}) {
+  return (
+    <Image
+      src="/logo-wordmark.png"
+      width={816}
+      height={316}
+      alt="チームのわ"
+      className={className}
+      priority={priority}
+    />
+  );
+}
+
 type LogoTextProps = {
   size?: "sm" | "md" | "lg";
   className?: string;

@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Logo } from "@/components/brand/Logo";
+import { LogoWordmark } from "@/components/brand/Logo";
 import { SportBackground } from "@/components/brand/SportBackground";
 import { SPORT_OPTIONS, DEFAULT_SPORT, resolveSport, type SportKey } from "@/lib/sports";
 
@@ -123,7 +123,7 @@ export function TeamsClient({
       {/* ヘッダー */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Logo iconSize={28} textSize="sm" />
+          <LogoWordmark className="h-8 w-auto" />
           <Button variant="ghost" size="sm" onClick={signOut} className="text-gray-400" aria-label="ログアウト">
             ログアウト
           </Button>
