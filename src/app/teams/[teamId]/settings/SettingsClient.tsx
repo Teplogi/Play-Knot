@@ -951,30 +951,25 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
             />
           </div>
           <div className="space-y-2">
-            <Label>スポーツ種別</Label>
+            <Label htmlFor="sport-type">スポーツ種別</Label>
             <p className="text-xs text-gray-600">
               選んだ種目のボール装飾が、チームの全画面の背景に表示されます。
             </p>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-              {SPORT_OPTIONS.map((opt) => {
-                const active = resolveSport(settings.sportType) === opt.key;
-                return (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => update("sportType", opt.label)}
-                    aria-pressed={active}
-                    className={`h-12 rounded-lg border text-sm font-medium transition-colors px-2 ${
-                      active
-                        ? "border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
+            <select
+              id="sport-type"
+              value={resolveSport(settings.sportType)}
+              onChange={(e) => {
+                const opt = SPORT_OPTIONS.find((o) => o.key === e.target.value);
+                if (opt) update("sportType", opt.label);
+              }}
+              className="w-full h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {SPORT_OPTIONS.map((opt) => (
+                <option key={opt.key} value={opt.key}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="team-desc">説明</Label>

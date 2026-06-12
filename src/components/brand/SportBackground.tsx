@@ -164,6 +164,70 @@ function TennisBall({ cx, cy, r, opacity = 1 }: { cx: number; cy: number; r: num
   );
 }
 
+function HandBall({ cx, cy, r, opacity = 1 }: { cx: number; cy: number; r: number; opacity?: number }) {
+  // ハンドボール: 円 + 緩やかな曲線パネル (暫定デザイン)
+  return (
+    <g opacity={opacity}>
+      <circle cx={cx} cy={cy} r={r} stroke={STROKE} strokeWidth="2" fill={FILL} fillOpacity="0.35" />
+      {[ -0.4, 0, 0.4 ].map((t) => (
+        <path
+          key={t}
+          d={`M ${cx - r} ${cy + r * t} Q ${cx} ${cy + r * (t - 0.4)} ${cx + r} ${cy + r * t}`}
+          stroke={STROKE}
+          strokeWidth="1.5"
+          fill="none"
+        />
+      ))}
+    </g>
+  );
+}
+
+function DodgeBall({ cx, cy, r, opacity = 1 }: { cx: number; cy: number; r: number; opacity?: number }) {
+  // ドッジボール: 円 + 同心円と十字 (暫定デザイン)
+  return (
+    <g opacity={opacity}>
+      <circle cx={cx} cy={cy} r={r} stroke={STROKE} strokeWidth="2" fill={FILL} fillOpacity="0.45" />
+      <circle cx={cx} cy={cy} r={r * 0.55} stroke={STROKE} strokeWidth="1.5" fill="none" />
+      <line x1={cx} y1={cy - r} x2={cx} y2={cy + r} stroke={STROKE} strokeWidth="1.5" />
+      <line x1={cx - r} y1={cy} x2={cx + r} y2={cy} stroke={STROKE} strokeWidth="1.5" />
+    </g>
+  );
+}
+
+function OvalBall({ cx, cy, r, opacity = 1, laces }: { cx: number; cy: number; r: number; opacity?: number; laces?: boolean }) {
+  // 楕円ボール (ラグビー / アメフト共通の暫定デザイン)
+  const rx = r;
+  const ry = r * 0.62;
+  return (
+    <g opacity={opacity}>
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke={STROKE} strokeWidth="2" fill={FILL} fillOpacity="0.35" />
+      {/* 中央のシーム */}
+      <line x1={cx - rx * 0.7} y1={cy} x2={cx + rx * 0.7} y2={cy} stroke={STROKE} strokeWidth="1.5" />
+      {/* レース (アメフトのみ) */}
+      {laces &&
+        [-0.4, -0.2, 0, 0.2, 0.4].map((t) => (
+          <line
+            key={t}
+            x1={cx + rx * t}
+            y1={cy - ry * 0.18}
+            x2={cx + rx * t}
+            y2={cy + ry * 0.18}
+            stroke={STROKE}
+            strokeWidth="1.5"
+          />
+        ))}
+    </g>
+  );
+}
+
+function RugbyBall(props: { cx: number; cy: number; r: number; opacity?: number }) {
+  return <OvalBall {...props} />;
+}
+
+function AmericanFootball(props: { cx: number; cy: number; r: number; opacity?: number }) {
+  return <OvalBall {...props} laces />;
+}
+
 type BallProps = { cx: number; cy: number; r: number; opacity?: number };
 
 const BALL_BY_SPORT: Record<SportKey, (props: BallProps) => React.ReactElement> = {
@@ -172,6 +236,13 @@ const BALL_BY_SPORT: Record<SportKey, (props: BallProps) => React.ReactElement> 
   baseball: BaseBall,
   volleyball: VolleyBall,
   tennis: TennisBall,
+  // 以下は暫定デザイン (背景は後で調整予定)
+  softball: BaseBall, // ソフトボールは野球ボールと同形状を流用
+  futsal: SoccerBall, // フットサルはサッカーボールを流用
+  handball: HandBall,
+  rugby: RugbyBall,
+  american_football: AmericanFootball,
+  dodgeball: DodgeBall,
 };
 
 export function SportBackground({ sport }: { sport: SportKey }) {

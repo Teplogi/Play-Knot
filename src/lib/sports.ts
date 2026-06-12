@@ -5,11 +5,22 @@
  * 値は表示用ラベル (例: "バレーボール") か、本ファイルの SportKey か、
  * あるいはまったく別の文字列 ("テストチーム" 等) のいずれかが入りうる。
  *
- * resolveSport は受け取った文字列から 5 種の SportKey に解決する。
+ * resolveSport は受け取った文字列から SportKey に解決する。
  * マッチしないものは "volleyball" (依頼チームのデフォルト) にフォールバック。
  */
 
-export type SportKey = "soccer" | "basketball" | "baseball" | "volleyball" | "tennis";
+export type SportKey =
+  | "soccer"
+  | "basketball"
+  | "baseball"
+  | "volleyball"
+  | "tennis"
+  | "softball"
+  | "futsal"
+  | "handball"
+  | "rugby"
+  | "american_football"
+  | "dodgeball";
 
 export const DEFAULT_SPORT: SportKey = "volleyball";
 
@@ -21,11 +32,17 @@ export type SportOption = {
 };
 
 export const SPORT_OPTIONS: SportOption[] = [
-  { key: "soccer", label: "サッカー", aliases: ["soccer", "football", "フットサル", "futsal", "フットボール"] },
+  { key: "soccer", label: "サッカー", aliases: ["soccer", "football", "フットボール"] },
   { key: "basketball", label: "バスケットボール", aliases: ["basketball", "バスケ"] },
-  { key: "baseball", label: "野球", aliases: ["baseball", "ベースボール", "ソフトボール", "softball"] },
+  { key: "baseball", label: "野球", aliases: ["baseball", "ベースボール"] },
   { key: "volleyball", label: "バレーボール", aliases: ["volleyball", "バレー"] },
   { key: "tennis", label: "テニス", aliases: ["tennis", "ソフトテニス", "卓球"] },
+  { key: "softball", label: "ソフトボール", aliases: ["softball", "ソフト"] },
+  { key: "futsal", label: "フットサル", aliases: ["futsal", "フットサル"] },
+  { key: "handball", label: "ハンドボール", aliases: ["handball", "ハンド"] },
+  { key: "rugby", label: "ラグビー", aliases: ["rugby", "ラグビー"] },
+  { key: "american_football", label: "アメフト", aliases: ["american_football", "americanfootball", "american football", "アメフト", "アメリカンフットボール"] },
+  { key: "dodgeball", label: "ドッジボール", aliases: ["dodgeball", "ドッジボール", "ドッヂボール"] },
 ];
 
 const SPORT_LOOKUP: Record<string, SportKey> = (() => {

@@ -253,27 +253,19 @@ export function TeamsClient({
               />
             </div>
             <div className="space-y-2">
-              <Label>スポーツ種別</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {SPORT_OPTIONS.map((opt) => {
-                  const active = newSportKey === opt.key;
-                  return (
-                    <button
-                      key={opt.key}
-                      type="button"
-                      onClick={() => setNewSportKey(opt.key)}
-                      aria-pressed={active}
-                      className={`h-11 rounded-lg border text-sm font-medium transition-colors px-2 ${
-                        active
-                          ? "border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-300"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <Label htmlFor="new-team-sport">スポーツ種別</Label>
+              <select
+                id="new-team-sport"
+                value={newSportKey}
+                onChange={(e) => setNewSportKey(e.target.value as SportKey)}
+                className="w-full h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {SPORT_OPTIONS.map((opt) => (
+                  <option key={opt.key} value={opt.key}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <DialogFooter>
