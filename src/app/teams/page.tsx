@@ -16,7 +16,7 @@ export default async function TeamsPage() {
   // 所属チーム一覧（ロール・スポーツ種別・アイコン色つき）
   const { data: memberships } = await supabase
     .from("team_members")
-    .select("role, teams(id, name, sport_type, icon_color, created_at)")
+    .select("role, teams(id, name, sport_type, icon_color, icon_url, created_at)")
     .eq("user_id", user.id);
 
 
@@ -26,6 +26,7 @@ export default async function TeamsPage() {
       name: string;
       sport_type: string;
       icon_color: string;
+      icon_url: string | null;
       created_at: string;
     };
     return {
@@ -33,6 +34,7 @@ export default async function TeamsPage() {
       name: t.name,
       sportType: t.sport_type || "",
       iconColor: t.icon_color || "indigo",
+      iconUrl: t.icon_url ?? null,
       memberCount: 0, // 後で集計
       nextSchedule: null as string | null,
       created_at: t.created_at,

@@ -22,7 +22,7 @@ export default async function SettingsPage({
     profileRes,
   ] = await Promise.all([
     getTeamMembership(teamId),
-    supabase.from("teams").select("name, sport_type, icon_color").eq("id", teamId).single(),
+    supabase.from("teams").select("name, sport_type, icon_color, icon_url").eq("id", teamId).single(),
     supabase.from("team_settings").select("*").eq("team_id", teamId).single(),
     supabase
       .from("invite_tokens")
@@ -52,6 +52,7 @@ export default async function SettingsPage({
     description: "",
     sportType: team?.sport_type ?? "",
     iconColor: team?.icon_color ?? "indigo",
+    iconUrl: team?.icon_url ?? null,
     defaultExpirationDays: 7,
     defaultLocations: teamSettings?.default_locations ?? [],
     defaultStartTime: teamSettings?.default_start_time ?? "19:00",

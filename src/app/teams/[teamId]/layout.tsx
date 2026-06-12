@@ -22,7 +22,7 @@ export default async function TeamLayout({
   await requireUser();
   const supabase = await createClient();
   const [teamRes, membership] = await Promise.all([
-    supabase.from("teams").select("name, sport_type").eq("id", teamId).single(),
+    supabase.from("teams").select("name, sport_type, icon_color, icon_url").eq("id", teamId).single(),
     getTeamMembership(teamId),
   ]);
 
@@ -46,7 +46,13 @@ export default async function TeamLayout({
   return (
     <div className="min-h-screen relative">
       <SportBackground sport={sport} />
-      <TeamNav teamId={teamId} teamName={team.name} role={role} />
+      <TeamNav
+        teamId={teamId}
+        teamName={team.name}
+        role={role}
+        iconColor={team.icon_color ?? "indigo"}
+        iconUrl={team.icon_url ?? null}
+      />
       <main className="pb-8">
         <div className="animate-page-in max-w-3xl mx-auto px-4 sm:px-6 py-6">
           {children}

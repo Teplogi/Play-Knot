@@ -26,6 +26,7 @@ type Team = {
   name: string;
   sportType: string;
   iconColor: string;
+  iconUrl: string | null;
   memberCount: number;
   nextSchedule: string | null;
   created_at: string;
@@ -184,9 +185,18 @@ export function TeamsClient({
                 <Link key={team.id} href={`/teams/${team.id}`}>
                   <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-md hover:border-indigo-200 transition-all duration-200 cursor-pointer group">
                     <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${ICON_BG_LIGHT[color] ?? ICON_BG_LIGHT.indigo}`}>
-                        <span className={`font-bold text-lg ${ICON_TEXT[color] ?? ICON_TEXT.indigo}`}>{team.name.charAt(0)}</span>
-                      </div>
+                      {team.iconUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={team.iconUrl}
+                          alt=""
+                          className="w-12 h-12 rounded-xl object-cover flex-shrink-0 border border-gray-100"
+                        />
+                      ) : (
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${ICON_BG_LIGHT[color] ?? ICON_BG_LIGHT.indigo}`}>
+                          <span className={`font-bold text-lg ${ICON_TEXT[color] ?? ICON_TEXT.indigo}`}>{team.name.charAt(0)}</span>
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         {/* 1行目: チーム名 + ロール */}
                         <div className="flex items-center gap-2">

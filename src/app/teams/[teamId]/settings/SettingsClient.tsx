@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export type TeamSettings = {
   description: string;
   sportType: string;
   iconColor: string;
+  iconUrl: string | null;
 
   defaultExpirationDays: number;
 
@@ -47,6 +48,7 @@ export type InviteLink = {
 import type { TeamRole, NotificationDaysBefore } from "@/types";
 import { hasHostPrivilege } from "@/types";
 import { SPORT_OPTIONS, resolveSport } from "@/lib/sports";
+import { uploadTeamIcon } from "@/lib/uploadTeamIcon";
 
 type MemberOption = { id: string; name: string; role: TeamRole };
 
@@ -482,6 +484,40 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
+  // ---- チームアイコン画像 ----
+  const iconFileInputRef = useRef<HTMLInputElement>(null);
+  const [iconUploading, setIconUploading] = useState(false);
+
+  const handleIconFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // 同じファイルを連続選択できるようにリセット
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("画像ファイルを選択してください");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("8MB以下の画像を選択してください");
+      return;
+    }
+    setIconUploading(true);
+    try {
+      const url = await uploadTeamIcon(teamId, file);
+      update("iconUrl", url);
+      toast.success("アイコン画像を設定しました。「保存」で確定します");
+    } catch (err) {
+      console.error("uploadTeamIcon error:", err);
+      toast.error("画像のアップロードに失敗しました");
+    } finally {
+      setIconUploading(false);
+    }
+  };
+
+  const removeIcon = () => {
+    update("iconUrl", null);
+    toast.success("頭文字アイコンに戻しました。「保存」で確定します");
+  };
+
   // ---- Section handlers ----
   const [basicSaving, setBasicSaving] = useState(false);
   const saveBasic = async () => {
@@ -496,6 +532,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
           sportType: settings.sportType,
           description: settings.description,
           iconColor: settings.iconColor,
+          iconUrl: settings.iconUrl,
         }),
       });
       if (!res.ok) throw new Error();
@@ -750,6 +787,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
               sportType: settings.sportType,
               description: settings.description,
               iconColor: settings.iconColor,
+              iconUrl: settings.iconUrl,
             }),
           }),
         ),
@@ -985,7 +1023,63 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
             <p className="text-xs text-gray-400 text-right">{settings.description.length}/200</p>
           </div>
           <div className="space-y-2">
+            <Label>アイコン画像</Label>
+            <p className="text-xs text-gray-600">
+              画像をアップロードするとチームのアイコンになります。未設定の場合は下のアイコン色＋頭文字が使われます。
+            </p>
+            <div className="flex items-center gap-4">
+              {settings.iconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={settings.iconUrl}
+                  alt="チームアイコン"
+                  className="w-16 h-16 rounded-xl object-cover border border-gray-200 flex-shrink-0"
+                />
+              ) : (
+                <div
+                  className={`w-16 h-16 rounded-xl ${
+                    ICON_COLORS.find((c) => c.key === settings.iconColor)?.bg ?? "bg-indigo-600"
+                  } flex items-center justify-center flex-shrink-0`}
+                >
+                  <span className="text-white text-2xl font-bold">{settings.name.charAt(0)}</span>
+                </div>
+              )}
+              <div className="flex flex-col items-start gap-2">
+                <input
+                  ref={iconFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleIconFile}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => iconFileInputRef.current?.click()}
+                  disabled={iconUploading}
+                  className="rounded-lg"
+                >
+                  {iconUploading
+                    ? "アップロード中..."
+                    : settings.iconUrl
+                    ? "画像を変更"
+                    : "画像を選択"}
+                </Button>
+                {settings.iconUrl && (
+                  <button
+                    type="button"
+                    onClick={removeIcon}
+                    className="text-xs text-gray-500 hover:text-red-500 underline"
+                  >
+                    画像を削除して頭文字アイコンに戻す
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
             <Label>アイコン色</Label>
+            <p className="text-xs text-gray-600">画像が未設定のときに使われる、頭文字アイコンの色です。</p>
             <div className="flex gap-2 flex-wrap">
               {ICON_COLORS.map((c) => (
                 <button

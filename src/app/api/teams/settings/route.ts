@@ -10,15 +10,26 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const { teamId, name, sportType, iconColor } = await request.json();
+    const { teamId, name, sportType, iconColor, iconUrl } = await request.json();
+
+    const updates: {
+      name: string;
+      sport_type: string;
+      icon_color: string;
+      icon_url?: string | null;
+    } = {
+      name,
+      sport_type: sportType || "",
+      icon_color: iconColor || "indigo",
+    };
+    // iconUrl は省略時に既存値を消さないよう、キーが渡された場合のみ更新する
+    if (iconUrl !== undefined) {
+      updates.icon_url = iconUrl || null;
+    }
 
     const { error } = await supabase
       .from("teams")
-      .update({
-        name,
-        sport_type: sportType || "",
-        icon_color: iconColor || "indigo",
-      })
+      .update(updates)
       .eq("id", teamId);
 
     if (error) {

@@ -11,6 +11,17 @@ type TeamNavProps = {
   teamId: string;
   teamName: string;
   role: string;
+  iconColor?: string;
+  iconUrl?: string | null;
+};
+
+const NAV_ICON_BG: Record<string, string> = {
+  indigo: "bg-indigo-600",
+  emerald: "bg-emerald-600",
+  amber: "bg-amber-500",
+  rose: "bg-rose-500",
+  violet: "bg-violet-600",
+  cyan: "bg-cyan-600",
 };
 
 function getNavItems(teamId: string, role: TeamRole) {
@@ -49,7 +60,7 @@ function NavIcon({ icon, className }: { icon: string; className?: string }) {
   }
 }
 
-export function TeamNav({ teamId, teamName, role }: TeamNavProps) {
+export function TeamNav({ teamId, teamName, role, iconColor = "indigo", iconUrl = null }: TeamNavProps) {
   const pathname = usePathname();
   const { setTeamRole, signOut } = useAuth();
   const navItems = getNavItems(teamId, role as TeamRole);
@@ -89,9 +100,18 @@ export function TeamNav({ teamId, teamName, role }: TeamNavProps) {
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
           </Link>
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-sm font-bold">{teamName.charAt(0)}</span>
-          </div>
+          {iconUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={iconUrl}
+              alt=""
+              className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className={`w-8 h-8 rounded-lg ${NAV_ICON_BG[iconColor] ?? NAV_ICON_BG.indigo} flex items-center justify-center flex-shrink-0`}>
+              <span className="text-white text-sm font-bold">{teamName.charAt(0)}</span>
+            </div>
+          )}
           <span className="font-bold text-base text-gray-900 truncate">{teamName}</span>
         </div>
         <button
