@@ -110,12 +110,16 @@ export function DivideClient({
     committed !== null &&
     (committed.members !== selectedMembers || committed.settings !== settings);
 
+  // 各機能のコンテンツ枠を白カードで囲み、背景が透けないようにする
+  const cardClass =
+    "bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:p-6";
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-900">チーム分け</h2>
 
       {/* メンバー選択 */}
-      <section>
+      <section className={cardClass}>
         <MemberSelectStep
           registeredMembers={registeredMembers}
           guestMembers={guestMembers}
@@ -128,10 +132,8 @@ export function DivideClient({
         />
       </section>
 
-      <hr className="border-gray-100" />
-
       {/* 設定 */}
-      <section>
+      <section className={cardClass}>
         <DivideSettingStep
           memberCount={selectedMembers.length}
           defaults={defaults}
@@ -157,10 +159,8 @@ export function DivideClient({
         )}
       </div>
 
-      <hr className="border-gray-100" />
-
       {/* 結果 */}
-      <section className="space-y-4">
+      <section className={`${cardClass} space-y-4`}>
         <h3 className="font-semibold text-gray-900">チーム分け結果</h3>
         {!result ? (
           <p className="text-sm text-gray-500">
