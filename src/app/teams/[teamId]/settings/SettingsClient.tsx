@@ -507,7 +507,8 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
       toast.success("アイコン画像を設定しました。「保存」で確定します");
     } catch (err) {
       console.error("uploadTeamIcon error:", err);
-      toast.error("画像のアップロードに失敗しました");
+      const detail = err instanceof Error ? err.message : "";
+      toast.error(detail ? `画像のアップロードに失敗しました: ${detail}` : "画像のアップロードに失敗しました");
     } finally {
       setIconUploading(false);
     }
