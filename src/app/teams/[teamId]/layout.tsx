@@ -54,7 +54,7 @@ export default async function TeamLayout({
         iconUrl={team.icon_url ?? null}
       />
       <main className="pb-8">
-        <div className="animate-page-in max-w-3xl mx-auto px-4 sm:px-6 py-6">
+        <div className="animate-page-in max-w-3xl mx-auto px-4 sm:px-6 py-6 text-halo">
           {children}
         </div>
       </main>

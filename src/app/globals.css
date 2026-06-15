@@ -139,3 +139,15 @@
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* スポーツ背景写真の上に直接乗る単独テキストの可読性確保。
+   白いハロー（縁取り）で、写真の明暗どちらでも黒文字が浮くようにする。
+   白カード(.bg-white)やボタンの中ではハローを消し、文字のにじみを防ぐ。 */
+.text-halo {
+  text-shadow:
+    0 1px 2px rgba(255, 255, 255, 0.95),
+    0 0 8px rgba(255, 255, 255, 0.85);
+}
+.text-halo :where(.bg-white, button) {
+  text-shadow: none;
+}

@@ -131,7 +131,7 @@ export function TeamsClient({
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-8 animate-page-in">
+      <div className="max-w-2xl mx-auto px-4 py-8 animate-page-in text-halo">
         <div className="flex items-end justify-between gap-3 mb-8">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-gray-900 leading-tight">
