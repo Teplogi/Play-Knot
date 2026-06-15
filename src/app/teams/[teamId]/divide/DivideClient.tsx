@@ -116,7 +116,9 @@ export function DivideClient({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-900">チーム分け</h2>
+      <div className="section-strip">
+        <h2 className="text-xl font-bold text-gray-900">チーム分け</h2>
+      </div>
 
       {/* メンバー選択 */}
       <section className={cardClass}>

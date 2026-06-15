@@ -57,7 +57,7 @@ export function ScheduleListClient({ teamId, schedules, totalMembers, userId, ca
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="section-strip flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-xl font-bold text-gray-900">練習日程</h2>
         <div className="flex items-center gap-2">
           {/* 表示切替 */}

@@ -27,7 +27,7 @@ export function MembersClient({
   return (
     <div className="space-y-8">
       <section className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="section-strip flex items-center justify-between gap-2">
           <h2 className="text-xl font-bold">メンバー管理</h2>
           <Link
             href={`/teams/${teamId}/settings#invite-links`}
@@ -43,7 +43,7 @@ export function MembersClient({
       </section>
 
       <section className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="section-strip flex items-center justify-between gap-2">
           <div>
             <h2 className="text-xl font-bold">助っ人</h2>
             <p className="text-xs text-muted-foreground mt-0.5">

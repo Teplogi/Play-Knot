@@ -58,7 +58,7 @@ export function NgListClient({
         </Link>
       </div>
 
-      <div>
+      <div className="section-strip">
         <h2 className="text-xl font-bold">チーム分け条件</h2>
         <p className="text-sm text-muted-foreground mt-1">
           チーム分け時に守りたい組み合わせを設定します。

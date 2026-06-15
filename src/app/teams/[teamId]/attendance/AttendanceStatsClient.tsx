@@ -15,7 +15,7 @@ export function AttendanceStatsClient({ stats }: Props) {
 
   return (
     <div className="space-y-4">
-      <div>
+      <div className="section-strip">
         <h2 className="text-xl font-bold">出席率</h2>
         <p className="text-sm text-muted-foreground">
           {totalMembers}人のメンバー ・ 平均出席率 {avgRate}%

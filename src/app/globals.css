@@ -151,3 +151,19 @@
 .text-halo :where(.bg-white, button) {
   text-shadow: none;
 }
+
+/* セクション見出し用の半透明ストリップ（背景写真の上でも読める）。
+   メンバーカード(.bg-white 不透明)とは別物に見えるよう、半透明＋左アクセントバーで差別化。 */
+.section-strip {
+  border-left: 4px solid #4f46e5; /* indigo-600 */
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.875rem;
+}
+/* ストリップ内では文字ハローを消してすっきりさせる */
+.section-strip,
+.section-strip * {
+  text-shadow: none;
+}
