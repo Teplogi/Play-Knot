@@ -538,6 +538,10 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
       });
       if (!res.ok) throw new Error();
       toast.success("基本情報を保存しました");
+      // ヘッダー(TeamNav)やチーム一覧はサーバーコンポーネントで描画されるため、
+      // 保存後に router.refresh() でルーターキャッシュを破棄して再取得しないと
+      // アイコン画像・チーム名の変更が反映されない。
+      router.refresh();
     } catch {
       toast.error("基本情報の保存に失敗しました");
     } finally {
