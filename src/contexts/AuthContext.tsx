@@ -54,11 +54,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getSession();
 
     // 認証状態の変化を監視
+    //
+    // コールバック内で supabase クエリ(fetchUser)を直接 await しない。
+    // onAuthStateChange のコールバックは auth ロック保持中に実行されるため、
+    // ここで supabase 関数を呼ぶとロック再取得でデッドロックし得る（公式が
+    // 非推奨とする形）。setTimeout(0) で auth の処理コンテキスト外に逃がす。
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         if (session?.user) {
           setAuthUser(session.user);
-          await fetchUser(session.user.id);
+          setTimeout(() => {
+            void fetchUser(session.user.id);
+          }, 0);
         } else {
           setAuthUser(null);
           setUser(null);
