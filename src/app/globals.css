@@ -152,18 +152,28 @@
   text-shadow: none;
 }
 
-/* セクション見出し用の半透明ストリップ（背景写真の上でも読める）。
-   メンバーカード(.bg-white 不透明)とは別物に見えるよう、半透明＋左アクセントバーで差別化。 */
+/* セクション見出し用のベタ塗りストリップ（背景写真の上でも読める）。
+   白カード(.bg-white)と明度が近く同化していた問題を解消するため、
+   ブランド色(indigo-600)のベタ塗り＋白文字にして見出しの階層を明確にする。
+   濃い面は「1ページに1〜数個の見出しストリップ」だけに留め、うるさくならないようにする。 */
 .section-strip {
-  border-left: 4px solid #4f46e5; /* indigo-600 */
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: #4f46e5; /* indigo-600 */
   border-radius: 0.5rem;
   padding: 0.5rem 0.875rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 /* ストリップ内では文字ハローを消してすっきりさせる */
 .section-strip,
 .section-strip * {
   text-shadow: none;
+}
+/* 見出しは白文字。要素セレクタで Tailwind の text-gray-900 等を確実に上書きする。 */
+.section-strip h1,
+.section-strip h2,
+.section-strip h3 {
+  color: #fff;
+}
+/* ストリップ内の補足テキスト（説明文）は白の薄めにして可読性を保つ。 */
+.section-strip .text-muted-foreground {
+  color: rgba(255, 255, 255, 0.82);
 }
