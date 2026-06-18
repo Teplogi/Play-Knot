@@ -10,7 +10,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const { name, sportType } = await request.json();
+    const { name, sportType, backgroundEnabled } = await request.json();
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "チーム名は必須です" }, { status: 400 });
@@ -37,6 +37,15 @@ export async function POST(request: Request) {
           ? "チームの新規作成権限がありません"
           : "チームの作成に失敗しました";
       return NextResponse.json({ error: message, detail: error.message }, { status });
+    }
+
+    // create_team は background_enabled = TRUE で作成する（DB デフォルト）。
+    // 「その他（自由入力）」など背景を出さないケースは、作成直後に OFF へ更新する。
+    if (team && backgroundEnabled === false) {
+      const teamId = (team as { id?: string }).id;
+      if (teamId) {
+        await supabase.from("teams").update({ background_enabled: false }).eq("id", teamId);
+      }
     }
 
     return NextResponse.json(team);

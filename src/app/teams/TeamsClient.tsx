@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { LogoWordmark } from "@/components/brand/Logo";
 import { SportBackground } from "@/components/brand/SportBackground";
-import { SPORT_OPTIONS, DEFAULT_SPORT, resolveSport, type SportKey } from "@/lib/sports";
+import { SPORT_OPTIONS, DEFAULT_SPORT, OTHER_SPORT_VALUE, resolveSport, type SportKey } from "@/lib/sports";
 
 type Team = {
   id: string;
@@ -72,7 +72,9 @@ export function TeamsClient({
   const { signOut } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
-  const [newSportKey, setNewSportKey] = useState<SportKey>(DEFAULT_SPORT);
+  const [newSportKey, setNewSportKey] = useState<string>(DEFAULT_SPORT);
+  const [newSportText, setNewSportText] = useState("");
+  const isOtherSport = newSportKey === OTHER_SPORT_VALUE;
 
   const [creating, setCreating] = useState(false);
 
@@ -83,11 +85,14 @@ export function TeamsClient({
     }
     setCreating(true);
     try {
-      const sportLabel = SPORT_OPTIONS.find((o) => o.key === newSportKey)?.label ?? "";
+      // 「その他（自由入力）」のときは入力テキストをそのまま種別に。背景は初期 OFF。
+      const sportLabel = isOtherSport
+        ? newSportText.trim()
+        : SPORT_OPTIONS.find((o) => o.key === newSportKey)?.label ?? "";
       const res = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newTeamName, sportType: sportLabel }),
+        body: JSON.stringify({ name: newTeamName, sportType: sportLabel, backgroundEnabled: !isOtherSport }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -99,6 +104,7 @@ export function TeamsClient({
       setCreateOpen(false);
       setNewTeamName("");
       setNewSportKey(DEFAULT_SPORT);
+      setNewSportText("");
       // チーム一覧をリロードして新しいチームを表示
       window.location.href = "/teams";
     } catch {
@@ -267,7 +273,7 @@ export function TeamsClient({
               <select
                 id="new-team-sport"
                 value={newSportKey}
-                onChange={(e) => setNewSportKey(e.target.value as SportKey)}
+                onChange={(e) => setNewSportKey(e.target.value)}
                 className="w-full h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {SPORT_OPTIONS.map((opt) => (
@@ -275,7 +281,22 @@ export function TeamsClient({
                     {opt.label}
                   </option>
                 ))}
+                <option value={OTHER_SPORT_VALUE}>その他（自由入力）</option>
               </select>
+              {isOtherSport && (
+                <Input
+                  aria-label="スポーツ種別（自由入力）"
+                  value={newSportText}
+                  onChange={(e) => setNewSportText(e.target.value)}
+                  maxLength={30}
+                  placeholder="例: バドミントン、フットサル など"
+                />
+              )}
+              {isOtherSport && (
+                <p className="text-xs text-gray-500">
+                  「その他」を選ぶと背景写真は表示されません（設定からあとで変更できます）。
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>

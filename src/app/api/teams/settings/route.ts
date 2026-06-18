@@ -10,18 +10,23 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
     }
 
-    const { teamId, name, sportType, iconColor, iconUrl } = await request.json();
+    const { teamId, name, sportType, iconColor, iconUrl, backgroundEnabled } = await request.json();
 
     const updates: {
       name: string;
       sport_type: string;
       icon_color: string;
       icon_url?: string | null;
+      background_enabled?: boolean;
     } = {
       name,
       sport_type: sportType || "",
       icon_color: iconColor || "indigo",
     };
+    // backgroundEnabled は省略時に既存値を変えないよう、明示された場合のみ更新する
+    if (typeof backgroundEnabled === "boolean") {
+      updates.background_enabled = backgroundEnabled;
+    }
     // iconUrl は省略時に既存値を消さないよう、キーが渡された場合のみ更新する
     if (iconUrl !== undefined) {
       updates.icon_url = iconUrl || null;

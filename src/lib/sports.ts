@@ -60,6 +60,19 @@ export function resolveSport(sportType: string | null | undefined): SportKey {
   return SPORT_LOOKUP[sportType.trim().toLowerCase()] ?? DEFAULT_SPORT;
 }
 
+/**
+ * 既知のスポーツに厳密に解決する。マッチしなければ null。
+ * resolveSport と違いフォールバックしないので、
+ * 「その他（自由入力）」かどうかの判定に使える。
+ */
+export function matchSport(sportType: string | null | undefined): SportKey | null {
+  if (!sportType) return null;
+  return SPORT_LOOKUP[sportType.trim().toLowerCase()] ?? null;
+}
+
+/** スポーツ種別セレクトで「その他（自由入力）」を表す値 */
+export const OTHER_SPORT_VALUE = "__other__";
+
 export function getSportLabel(key: SportKey): string {
   return SPORT_OPTIONS.find((o) => o.key === key)?.label ?? "";
 }

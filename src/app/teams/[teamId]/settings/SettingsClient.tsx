@@ -19,6 +19,7 @@ export type TeamSettings = {
   name: string;
   description: string;
   sportType: string;
+  backgroundEnabled: boolean;
   iconColor: string;
   iconUrl: string | null;
 
@@ -47,7 +48,7 @@ export type InviteLink = {
 
 import type { TeamRole, NotificationDaysBefore } from "@/types";
 import { hasHostPrivilege } from "@/types";
-import { SPORT_OPTIONS, resolveSport } from "@/lib/sports";
+import { SPORT_OPTIONS, matchSport, OTHER_SPORT_VALUE } from "@/lib/sports";
 import { uploadTeamIcon } from "@/lib/uploadTeamIcon";
 
 type MemberOption = { id: string; name: string; role: TeamRole };
@@ -484,6 +485,28 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
+  // スポーツ種別セレクトの現在値（既知の種目 or「その他」）
+  const matchedSport = matchSport(settings.sportType);
+  const isOtherSport = matchedSport === null; // 自由入力 or 未マッチ
+
+  const handleSportChange = (value: string) => {
+    if (value === OTHER_SPORT_VALUE) {
+      // 「その他（自由入力）」へ。デフォルト背景は「なし」に倒す。
+      // すでに自由入力中なら入力済みテキストは保持する。
+      setSettings((prev) => ({
+        ...prev,
+        sportType: matchSport(prev.sportType) === null ? prev.sportType : "",
+        backgroundEnabled: false,
+      }));
+    } else {
+      // 既知の種目を選んだら、その種目のラベルを保存し背景を表示する。
+      const opt = SPORT_OPTIONS.find((o) => o.key === value);
+      if (opt) {
+        setSettings((prev) => ({ ...prev, sportType: opt.label, backgroundEnabled: true }));
+      }
+    }
+  };
+
   // ---- チームアイコン画像 ----
   const iconFileInputRef = useRef<HTMLInputElement>(null);
   const [iconUploading, setIconUploading] = useState(false);
@@ -534,6 +557,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
           description: settings.description,
           iconColor: settings.iconColor,
           iconUrl: settings.iconUrl,
+          backgroundEnabled: settings.backgroundEnabled,
         }),
       });
       if (!res.ok) throw new Error();
@@ -793,6 +817,7 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
               description: settings.description,
               iconColor: settings.iconColor,
               iconUrl: settings.iconUrl,
+              backgroundEnabled: settings.backgroundEnabled,
             }),
           }),
         ),
@@ -1000,11 +1025,8 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
             </p>
             <select
               id="sport-type"
-              value={resolveSport(settings.sportType)}
-              onChange={(e) => {
-                const opt = SPORT_OPTIONS.find((o) => o.key === e.target.value);
-                if (opt) update("sportType", opt.label);
-              }}
+              value={isOtherSport ? OTHER_SPORT_VALUE : matchedSport}
+              onChange={(e) => handleSportChange(e.target.value)}
               className="w-full h-11 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {SPORT_OPTIONS.map((opt) => (
@@ -1012,7 +1034,26 @@ export function SettingsClient({ teamId, role, initialSettings, initialInvites, 
                   {opt.label}
                 </option>
               ))}
+              <option value={OTHER_SPORT_VALUE}>その他（自由入力）</option>
             </select>
+            {isOtherSport && (
+              <Input
+                aria-label="スポーツ種別（自由入力）"
+                value={settings.sportType}
+                onChange={(e) => update("sportType", e.target.value)}
+                maxLength={30}
+                placeholder="例: バドミントン、フットサル など"
+              />
+            )}
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-gray-100">
+            <Toggle
+              checked={settings.backgroundEnabled}
+              onChange={(v) => update("backgroundEnabled", v)}
+              label="背景写真を表示する"
+              description="OFF にすると背景写真を表示せず、白い背景になります。「その他（自由入力）」を選んだときの初期値は OFF です。"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="team-desc">説明</Label>
